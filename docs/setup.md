@@ -52,7 +52,7 @@ The container can't see USB devices, so deploy over Wi-Fi:
 2. It may take a few minutes to sync and build. You are ready when the left-hand panel shows `robot`, `framework`, `pedro`, `FtcRobotController` and `Gradle Scripts`.
 3. Plug in or connect to your Control Hub and press the green **Run** button to deploy.
 
-To see how commands run without a robot, pick the **Command tree visualizer** run configuration instead (see [`examples/`](../examples/README.md#running-the-command-tree-visualizer)).
+To see how behavior trees run without a robot, pick the **Behavior tree visualizer** run configuration instead (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)).
 
 ---
 
@@ -77,7 +77,8 @@ All under **Terminal** → **Run Task…**, in or out of the container:
 | **Build** (`Ctrl/Cmd+Shift+B`) | Compiles the Robot Controller app |
 | **Connect to Control Hub (Wi-Fi)** | Connects `adb` to a Control Hub whose Wi-Fi network you have joined (not needed over USB) |
 | **Deploy to robot** | Installs the app on the connected Control Hub/phone and starts it |
-| **Run command tree visualizer** | Runs the command example on this computer with a live view at http://localhost:8765 (see [`examples/`](../examples/README.md#running-the-command-tree-visualizer)) |
+| **Test framework** | Runs the behavior tree unit tests (no robot needed) |
+| **Run behavior tree visualizer** | Runs the behavior tree example on this computer with a live view at http://localhost:8765 (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)) |
 | **Refresh VS Code classpath** | Updates VS Code's view of the libraries |
 | **Clean** | Deletes build outputs |
 

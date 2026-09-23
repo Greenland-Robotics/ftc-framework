@@ -12,6 +12,16 @@
       "problemMatcher": []
     },
     {
+      "label": "Test framework",
+      "detail": "Run the behavior tree unit tests (no robot needed)",
+      "type": "shell",
+      "command": "./gradlew",
+      "windows": { "command": ".\\gradlew.bat" },
+      "args": [":framework:test"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
       "label": "Deploy to robot",
       "detail": "Install the app on the connected Control Hub / phone and start it",
       "type": "shell",
@@ -36,8 +46,8 @@
       "problemMatcher": []
     },
     {
-      "label": "Run command tree visualizer",
-      "detail": "Run examples/general/CommandBasics and show its command tree at http://localhost:8765",
+      "label": "Run behavior tree visualizer",
+      "detail": "Run examples/general/BehaviorBasics and show its tree live at http://localhost:8765",
       "type": "shell",
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },

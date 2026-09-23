@@ -2,7 +2,7 @@
 // build.gradle in examples
 //
 // Builds and runs the laptop examples in general/ (plain Java, no Android), such as the
-// command tree visualizer:
+// behavior tree visualizer:
 //
 //      ./gradlew :examples:run
 //
@@ -28,11 +28,11 @@ dependencies {
 }
 
 application {
-    mainClass = 'CommandBasics'
+    mainClass = 'BehaviorBasics'
 }
 
 run {
-    // The visualizer swaps each command's children for traced copies, which newer JDKs warn about
+    // The visualizer swaps each node's children for traced copies, which newer JDKs warn about
     if (JavaVersion.current() >= JavaVersion.toVersion(26)) {
         jvmArgs '--enable-final-field-mutation=ALL-UNNAMED'
     }

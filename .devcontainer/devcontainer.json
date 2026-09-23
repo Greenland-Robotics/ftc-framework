@@ -12,20 +12,27 @@
   "remoteUser": "vscode",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
+  // Gradle's file watching doesn't work under x86 emulation; turn it off to avoid noisy errors
+  "containerEnv": {
+    "GRADLE_OPTS": "-Dorg.gradle.vfs.watch=false"
+  },
+
   // Keep Gradle and its downloads between container rebuilds
   "mounts": [
     "source=ftc-framework-gradle,target=/home/vscode/.gradle,type=volume"
   ],
 
-  // The command tree visualizer (examples/general/visualizer) serves its web page on this port.
+  // The behavior tree visualizer (examples/general/visualizer) serves its web page on this port.
   // VS Code forwards it, so http://localhost:8765 works in the browser on your computer.
   "forwardPorts": [8765],
   "portsAttributes": {
-    "8765": { "label": "Command tree visualizer", "onAutoForward": "openBrowserOnce" }
+    "8765": { "label": "Behavior tree visualizer", "onAutoForward": "openBrowserOnce" }
   },
 
-  // Download dependencies and export them so VS Code can resolve FTC SDK and Pedro classes
-  "postCreateCommand": "./gradlew --console=plain :robot:vscodeClasspath",
+  // Download dependencies and generate the Java project VS Code loads (gradle/vscode.gradle).
+  // As an onCreateCommand it finishes before VS Code starts its Java extension, which would
+  // otherwise start without the project and report every file as a "non-project file".
+  "onCreateCommand": "./gradlew --console=plain :robot:vscodeClasspath",
 
   "customizations": {
     "vscode": {

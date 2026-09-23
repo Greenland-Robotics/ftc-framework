@@ -1,6 +1,6 @@
 # Greenland Robotics FTC Framework
 
-A template for FIRST Tech Challenge robots. Build Autos and TeleOps by combining small **commands** ("drive this path", "shoot", "wait 1 second") instead of writing long `while` loops, with [Pedro Pathing](https://pedropathing.com) for driving and path following.
+A template for FIRST Tech Challenge robots. Build Autos and TeleOps as **behavior trees**: small building blocks ("drive this path", "collect a sample", "try this, otherwise that") combined into routines, instead of long `while` loops. Each mechanism is a **subsystem** that owns its hardware. [Pedro Pathing](https://pedropathing.com) handles driving and path following.
 
 Works with **Android Studio** and **VS Code**, including a dev container that needs no Java or Android SDK on your computer: just run `./open-workspace`.
 
@@ -8,9 +8,9 @@ Works with **Android Studio** and **VS Code**, including a dev container that ne
 
 ```
 ftc-framework/
-├── robot/               ← YOUR ROBOT CODE: hardware, OpModes, custom commands
-├── framework/           ← The command framework (Command, SeriesCommand, ...)
-├── pedro/               ← Pedro Pathing: drivetrain config, tuning OpModes, FollowPath
+├── robot/               ← YOUR ROBOT CODE: subsystems, OpModes
+├── framework/           ← The behavior tree framework (sequence, selector, Action, ...)
+├── pedro/               ← Pedro Pathing: drivetrain config, tuning OpModes, the Drive subsystem
 ├── examples/            ← Examples to learn from and copy into robot/
 ├── docs/                ← Setup guide and licenses
 ├── FtcRobotController/  ← FTC SDK app shell (don't edit)
@@ -22,10 +22,10 @@ ftc-framework/
 
 | Folder | What it is | How often you edit it |
 |--------|------------|-----------------------|
-| [`robot/`](robot/README.md) | The app installed on the robot: your OpModes, commands and hardware (`control/OpModeBase.java`) | All the time |
-| [`pedro/`](pedro/README.md) | `Constants.java` (motor names, odometry, tuned values), the **Tuning** OpMode, `FollowPath` | When setting up or tuning a robot |
-| [`framework/`](framework/README.md) | The command building blocks. Plain Java, no Android | Only to add new kinds of commands |
-| [`examples/`](examples/README.md) | General command examples you can run on a laptop (with a live web view of the command tree), and FTC OpMode examples/boilerplates | Never: copy from it |
+| [`robot/`](robot/README.md) | The app installed on the robot: `Robot.java`, your subsystems and OpModes | All the time |
+| [`pedro/`](pedro/README.md) | `Constants.java` (motor names, odometry, tuned values), the **Tuning** OpMode, the `Drive` subsystem | When setting up or tuning a robot |
+| [`framework/`](framework/README.md) | The behavior tree building blocks and `Subsystem`. Plain Java, no Android, unit-tested | Only to add new kinds of nodes |
+| [`examples/`](examples/README.md) | A behavior tree demo you can run on a laptop (with a live web view of the tree), and FTC examples (subsystem, Auto, TeleOp) and boilerplates | Never: copy from it |
 | [`docs/`](docs/setup.md) | Setup guide and licenses | Never |
 | `FtcRobotController/` | The FTC Robot Controller app shell | Never |
 | `open-workspace`, [`scripts/`](scripts/bootstrap.sh), [`.devcontainer/`](.devcontainer/) | The dev container and the scripts that set it up. See [setup option A](docs/setup.md#a-vs-code-dev-container-recommended) | Rarely |
@@ -38,19 +38,19 @@ Each folder's README explains what's inside and documents its classes.
 |--------------|-------|
 | Set up my computer and deploy to the robot | [`docs/setup.md`](docs/setup.md) |
 | Write an Auto or TeleOp | Copy a boilerplate from [`examples/ftc/`](examples/ftc/) into [`robot/src/robot/opmode/`](robot/src/robot/opmode/) |
-| Add motors, servos or sensors | `initHardware()` in [`OpModeBase.java`](robot/src/robot/control/OpModeBase.java) |
-| Write a custom command (e.g. `Shoot`) | [`robot/src/robot/commands/`](robot/src/robot/commands/) |
+| Add a mechanism (motors, servos, sensors) | A subsystem in [`robot/src/robot/subsystems/`](robot/src/robot/subsystems/), registered in [`Robot.java`](robot/src/robot/Robot.java) |
+| Write a custom behavior (e.g. raise the arm) | An `Action` inside your subsystem. See [`framework/README.md`](framework/README.md#writing-your-own-action) |
 | Set drive motor names or odometry | [`Constants.java`](pedro/src/pedro/Constants.java) |
 | Tune Pedro Pathing | [`pedro/README.md`](pedro/README.md#tuning-a-new-robot) |
-| Look up a command (`SeriesCommand`, `AwaitCommand`, ...) | [`framework/README.md`](framework/README.md) |
-| Learn how commands work, without a robot | Run the [command tree visualizer](examples/README.md#running-the-command-tree-visualizer) |
+| Look up a node (`sequence`, `selector`, `retry`, ...) | [`framework/README.md`](framework/README.md#node-reference) |
+| Learn how behavior trees work, without a robot | Run the [behavior tree visualizer](examples/README.md#running-the-behavior-tree-visualizer) |
 | Add a library | `build.dependencies.gradle` |
 
 ## Quick start
 1. Click **Use this template** on GitHub to create your team's repository and clone it. On a Mac, run `./open-workspace` to get a ready-to-go VS Code; otherwise follow [`docs/setup.md`](docs/setup.md).
 2. Set your drive motor names and odometry in [`Constants.java`](pedro/src/pedro/Constants.java), deploy, and run the **Tuning** OpMode.
-3. Add your hardware to [`OpModeBase.java`](robot/src/robot/control/OpModeBase.java).
-4. Copy `BoilerplateAuto.java` / `BoilerplateTeleOp.java` from [`examples/ftc/`](examples/ftc/) into `robot/src/robot/opmode/` and start building commands. See the [robot guide](robot/README.md).
+3. Add a subsystem for each mechanism and register it in [`Robot.java`](robot/src/robot/Robot.java). [`examples/ftc/Intake.java`](examples/ftc/Intake.java) shows how.
+4. Copy `BoilerplateAuto.java` / `BoilerplateTeleOp.java` from [`examples/ftc/`](examples/ftc/) into `robot/src/robot/opmode/` and build your behavior trees. See the [robot guide](robot/README.md).
 
 ## How the modules fit together
 
@@ -61,13 +61,13 @@ robot ──► pedro ──► framework
   └──► FtcRobotController (FTC SDK)
 ```
 
-`framework` knows nothing about the robot; `pedro` adds driving on top of it; `robot` uses both and is what gets installed on the robot.
+`framework` knows nothing about the robot; `pedro` adds the `Drive` subsystem on top of it; `robot` builds the robot from subsystems and is what gets installed on it.
 
 | Module | Java package | Example import |
 |--------|--------------|----------------|
-| `framework` | `commands` | `import commands.SeriesCommand;` |
-| `pedro` | `pedro` | `import pedro.FollowPath;` |
-| `robot` | `robot.control`, `robot.opmode`, `robot.commands` | `import robot.control.AutoBase;` |
+| `framework` | `behavior`, `behavior.*`, `subsystem` | `import static behavior.Behaviors.*;` |
+| `pedro` | `pedro` | `import pedro.Drive;` |
+| `robot` | `robot`, `robot.control`, `robot.opmode`, `robot.subsystems` | `import robot.control.AutoBase;` |
 
 ## Questions?
 - Each module's README documents its classes with purpose, usage and examples.

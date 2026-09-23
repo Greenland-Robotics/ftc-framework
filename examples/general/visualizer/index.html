@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Command Tree</title>
+<title>Behavior Tree</title>
 <style>
   :root {
     --bg: #f6f7f9;
@@ -15,12 +15,14 @@
     --pending: #9aa3b2;
     --running: #2563eb;
     --running-soft: #e5edff;
-    --finished: #15803d;
-    --finished-soft: #e3f4e8;
-    --interrupted: #c2410c;
-    --interrupted-soft: #fdeee4;
-    --error: #b91c1c;
-    --error-soft: #fde8e8;
+    --success: #15803d;
+    --success-soft: #e3f4e8;
+    --failure: #b91c1c;
+    --failure-soft: #fde8e8;
+    --halted: #c2410c;
+    --halted-soft: #fdeee4;
+    --error: #9f1239;
+    --error-soft: #fde8ee;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     color-scheme: light;
   }
@@ -35,12 +37,14 @@
       --pending: #6b7384;
       --running: #6d9bff;
       --running-soft: #1b2a4a;
-      --finished: #4fc775;
-      --finished-soft: #16301f;
-      --interrupted: #f08a4b;
-      --interrupted-soft: #3a2415;
-      --error: #f36b6b;
-      --error-soft: #3a1818;
+      --success: #4fc775;
+      --success-soft: #16301f;
+      --failure: #f36b6b;
+      --failure-soft: #3a1818;
+      --halted: #f08a4b;
+      --halted-soft: #3a2415;
+      --error: #ff7aa2;
+      --error-soft: #3d1624;
       color-scheme: dark;
     }
   }
@@ -66,7 +70,8 @@
     background: var(--soft); color: var(--muted);
   }
   .pill.playing { background: var(--running-soft); color: var(--running); }
-  .pill.finished { background: var(--finished-soft); color: var(--finished); }
+  .pill.success { background: var(--success-soft); color: var(--success); }
+  .pill.failure { background: var(--failure-soft); color: var(--failure); }
   .pill.error, .pill.offline { background: var(--error-soft); color: var(--error); }
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
   .controls button {
@@ -126,9 +131,10 @@
   .legend { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; font-size: 13px; }
   .swatch { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--pending); background: var(--panel); }
   .swatch.running { border-color: var(--running); background: var(--running-soft); }
-  .swatch.finished { border-color: var(--finished); background: var(--finished-soft); }
-  .swatch.interrupted { border-color: var(--interrupted); background: var(--interrupted-soft); }
-  .swatch.skipped { border-style: dashed; opacity: .6; }
+  .swatch.success { border-color: var(--success); background: var(--success-soft); }
+  .swatch.failure { border-color: var(--failure); background: var(--failure-soft); }
+  .swatch.halted { border-color: var(--halted); background: var(--halted-soft); }
+  .swatch.ticked { box-shadow: 0 0 0 3px color-mix(in srgb, var(--running) 40%, transparent); }
   .help { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
   .help code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
   kbd { font-family: var(--mono); font-size: 11px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; }
@@ -136,25 +142,25 @@
   /* ---- Tree ---- */
   .node { --c: var(--pending); --soft-c: transparent; }
   .node.s-running { --c: var(--running); --soft-c: var(--running-soft); }
-  .node.s-finished { --c: var(--finished); --soft-c: var(--finished-soft); }
-  .node.s-interrupted { --c: var(--interrupted); --soft-c: var(--interrupted-soft); }
+  .node.s-success { --c: var(--success); --soft-c: var(--success-soft); }
+  .node.s-failure { --c: var(--failure); --soft-c: var(--failure-soft); }
+  .node.s-halted { --c: var(--halted); --soft-c: var(--halted-soft); }
   .node.s-error { --c: var(--error); --soft-c: var(--error-soft); }
-  .node.s-skipped { opacity: .5; }
 
   .card {
     background: var(--panel); border: 2px solid var(--c); border-radius: 10px;
     padding: 8px 12px; min-width: 210px; max-width: 320px;
     transition: border-color .15s, background-color .15s;
   }
-  .node.s-running > .card, .node.s-finished > .card, .node.s-interrupted > .card, .node.s-error > .card {
-    background: var(--soft-c);
-  }
-  .node.s-skipped > .card { border-style: dashed; }
+  .node:not(.s-idle) > .card { background: var(--soft-c); }
+  .node.s-idle > .card { border-style: dashed; }
+  /* Ticked in the last step: the path the tick took through the tree */
+  .node.ticked > .card { box-shadow: 0 0 0 4px color-mix(in srgb, var(--running) 35%, transparent); }
   .node.hl > .card { outline: 3px solid var(--c); outline-offset: 2px; }
 
   .card-head { display: flex; align-items: center; gap: 8px; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
-  .node.s-running > .card .dot { animation: pulse 1s ease-in-out infinite; }
+  .node.ticked > .card .dot { animation: pulse 1s ease-in-out infinite; }
   @keyframes pulse { 50% { transform: scale(1.5); opacity: .55; } }
   .type { font-weight: 650; }
   .badge { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--c); text-transform: uppercase; letter-spacing: .04em; }
@@ -170,7 +176,7 @@
     background: color-mix(in srgb, var(--soft) 45%, transparent);
     transition: border-color .15s;
   }
-  .node.composite.s-running { border-color: color-mix(in srgb, var(--running) 45%, var(--line)); }
+  .node.composite.ticked { border-color: color-mix(in srgb, var(--running) 45%, var(--line)); }
   .node.composite > .card { max-width: none; }
   .kids { display: flex; gap: 10px; margin-top: 10px; }
   .kids-series, .kids-wrapper, .kids-group { flex-direction: column; align-items: flex-start; gap: 0; padding-left: 14px; }
@@ -205,15 +211,15 @@
 </head>
 <body>
 <header>
-  <h1>Command tree</h1>
+  <h1>Behavior tree</h1>
   <span id="status" class="pill">connecting…</span>
   <div class="controls">
-    <button id="step" title="Run one step (→)">Step</button>
+    <button id="step" title="Tick once (→)">Step: tick()</button>
     <button id="play" class="primary" title="Play or pause (space)">Play</button>
     <button id="restart" title="Build the routine again and start over (R)">Restart</button>
     <label>Speed
       <select id="period">
-        <option value="20">Real time: update every 20 ms</option>
+        <option value="20">Real time: tick every 20 ms</option>
         <option value="100">Slow: every 100 ms</option>
         <option value="250">Slower: every 250 ms</option>
         <option value="1000">Very slow: every 1 s</option>
@@ -224,15 +230,15 @@
 <div class="offline-banner">Can't reach the program. Is it still running? This page reconnects on its own.</div>
 
 <main class="layout">
-  <section class="tree-pane" aria-label="Command tree"><div id="tree"></div></section>
+  <section class="tree-pane" aria-label="Behavior tree"><div id="tree"></div></section>
 
   <aside>
     <div class="panel">
       <h2>Last step</h2>
       <div id="last" class="step-text"></div>
       <div class="numbers">
-        <div><b id="updates">0</b><span>update() calls</span></div>
-        <div><b id="elapsed">0.00 s</b><span>since start()</span></div>
+        <div><b id="ticks">0</b><span>ticks</span></div>
+        <div><b id="elapsed">0.00 s</b><span>since the first tick</span></div>
       </div>
       <div id="error" class="error-box" hidden></div>
     </div>
@@ -250,16 +256,17 @@
     <div class="panel">
       <h2>How to read it</h2>
       <div class="legend">
-        <span class="swatch"></span><span>Not started yet</span>
-        <span class="swatch running"></span><span>Running: its <code>loop()</code> is being called</span>
-        <span class="swatch finished"></span><span>Finished: <code>isFinished()</code> returned true</span>
-        <span class="swatch interrupted"></span><span>Stopped by its parent before finishing</span>
-        <span class="swatch skipped"></span><span>Skipped: its parent never started it</span>
+        <span class="swatch" style="border-style:dashed"></span><span>Not ticked yet</span>
+        <span class="swatch running"></span><span>Last tick returned <code>RUNNING</code></span>
+        <span class="swatch success"></span><span>Last tick returned <code>SUCCESS</code></span>
+        <span class="swatch failure"></span><span>Last tick returned <code>FAILURE</code></span>
+        <span class="swatch halted"></span><span>Halted by its parent while running</span>
+        <span class="swatch ticked"></span><span>Glow: ticked in the last step</span>
       </div>
       <p class="help">
-        Each <code>update()</code>, the runner calls <code>loop()</code> and then <code>isFinished()</code> on the
-        root command. Commands with children pass those calls on, so the running (blue) commands
-        are the path the calls take this tick.
+        Each step, the runner calls <code>tick()</code> on the root. Every parent decides which
+        children to tick, so the glowing nodes are the path the tick took. Colors show what each
+        node returned the last time it was ticked.
       </p>
       <p class="help">Keys: <kbd>→</kbd> step, <kbd>space</kbd> play/pause, <kbd>R</kbd> restart.</p>
     </div>
@@ -318,19 +325,22 @@
   // ---- Updating it (every poll) ----
 
   const STATUS_TEXT = {
-    pending: "", running: "running", finished: "done", interrupted: "stopped", skipped: "skipped", error: "threw"
+    idle: "", running: "running", success: "success", failure: "failure", halted: "halted", error: "threw"
   };
 
   function update(n, errorNode) {
-    const status = n.id === errorNode ? "error" : n.status;
+    const status = n.id === errorNode ? "error" : n.state;
     for (const v of views.get(n.id) || []) {
       v.node.className = v.node.className.replace(/\bs-\w+/g, "").trim() + " s-" + status;
+      v.node.classList.toggle("ticked", n.tickedNow);
       v.badge.textContent = STATUS_TEXT[status];
       v.desc.textContent = n.description;
       v.desc.hidden = !n.description;
       const parts = [];
-      if (n.inits) {
-        parts.push("init " + n.inits, "loop " + n.loops);
+      if (n.ticks) {
+        parts.push("ticks " + n.ticks);
+        if (n.runs > 1) parts.push("runs " + n.runs);
+        if (n.halts) parts.push("halted " + n.halts + "×");
         if (n.ms != null) parts.push(seconds(n.ms));
       }
       v.stats.textContent = parts.join(" · ");
@@ -362,7 +372,7 @@
     const status = $("status");
     status.className = "pill";
     if (s.error) { status.textContent = "error"; status.classList.add("error"); }
-    else if (s.finished) { status.textContent = "finished"; status.classList.add("finished"); }
+    else if (s.finished) { status.textContent = "finished: " + s.result; status.classList.add(s.result); }
     else if (s.playing) { status.textContent = "playing"; status.classList.add("playing"); }
     else status.textContent = s.started ? "paused" : "ready";
 
@@ -370,11 +380,10 @@
     $("play").textContent = s.playing ? "Pause" : "Play";
     $("play").disabled = done;
     $("step").disabled = done;
-    $("step").textContent = s.started ? "Step: update()" : "Step: start()";
     if (document.activeElement !== $("period")) $("period").value = String(s.periodMs);
 
     $("last").textContent = s.lastAction;
-    $("updates").textContent = s.updates;
+    $("ticks").textContent = s.ticks;
     $("elapsed").textContent = seconds(s.elapsedMs);
     $("error").hidden = !s.error;
     $("error").textContent = s.error || "";
@@ -399,7 +408,7 @@
     }
     log.replaceChildren(...s.log.map((line) => {
       const li = el("li");
-      li.title = "update() #" + line.update;
+      li.title = "tick #" + line.tick;
       li.append(el("span", "when", seconds(line.ms).replace(" s", "s")));
       const text = el("span");
       if (line.node >= 0) text.append(el("span", "who", typeOf.get(line.node) + ": "));

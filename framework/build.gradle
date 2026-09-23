@@ -1,8 +1,8 @@
 //
 // build.gradle in framework
 //
-// The command framework is plain Java with no Android or FTC SDK dependencies,
-// so it can be compiled and unit-tested on a normal JVM.
+// The behavior tree framework is plain Java with no Android or FTC SDK dependencies,
+// so it can be compiled and unit-tested on a normal JVM:  ./gradlew :framework:test
 //
 apply plugin: 'java-library'
 
@@ -15,4 +15,30 @@ sourceSets {
     main {
         java.srcDirs = ['src']
     }
+    test {
+        java.srcDirs = ['test']
+    }
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
+    }
+}
+
+// Exports the test libraries (JUnit) for VS Code; run as part of :robot:vscodeClasspath
+tasks.register('vscodeTestClasspath', Sync) {
+    group = 'ide'
+    description = 'Copies the framework test classpath into .vscode/classpath/test for VS Code.'
+    from(configurations.testCompileClasspath.incoming.artifactView {
+        componentFilter { id -> !(id instanceof ProjectComponentIdentifier) }
+    }.files)
+    into(rootProject.file('.vscode/classpath/test'))
 }
