@@ -7,6 +7,9 @@
       "name": "Behavior tree visualizer",
       "request": "launch",
       "mainClass": "BehaviorBasics",
+      // The project gradle/vscode.gradle generates, named after the repository folder. Naming it
+      // keeps the launch unambiguous if another checkout's project is also in the workspace.
+      "projectName": "${workspaceFolderBasename}",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
     }
