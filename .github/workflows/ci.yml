@@ -37,5 +37,5 @@ jobs:
 
       - name: Run the general example
         run: |
-          javac -d build/examples $(find framework/src -name '*.java') examples/general/BehaviorBasics.java
-          java -cp build/examples BehaviorBasics
+          javac -d build/examples $(find framework/src examples/general -name '*.java')
+          java -cp build/examples BehaviorBasics --console

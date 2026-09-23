@@ -1,35 +1,60 @@
 import static behavior.Behaviors.*;
 
+import java.util.Arrays;
+
 import behavior.Action;
 import behavior.Node;
 import behavior.Status;
 import behavior.runtime.BehaviorRunner;
+import visualizer.TreeVisualizer;
 
 /**
  * The behavior tree building blocks, running on a laptop with a pretend robot.
  *
- * The "robot" is a few variables, and main() plays the role of the OpMode's main loop: it ticks
- * a BehaviorRunner every 20 ms. On a real robot, AutoBase/TeleOpBase run that loop for you.
+ * The "robot" is a few variables. Running this opens a web page that shows the tree live: which
+ * nodes are ticked, what each returned (RUNNING, SUCCESS, FAILURE), which were halted, and what
+ * each printed. Press Step to call runner.tick() once, or Play to tick every 20 ms like an OpMode.
+ * On a real robot, AutoBase/TeleOpBase run that loop for you.
  *
- * Run it from the repository root:
- *     javac -d build/examples $(find framework/src -name '*.java') examples/general/BehaviorBasics.java
- *     java -cp build/examples BehaviorBasics
+ * Run it (see examples/README.md for more ways):
+ *     VS Code:         Run and Debug → "Behavior tree visualizer"
+ *     Android Studio:  the "Behavior tree visualizer" run configuration
+ *     Terminal:        ./gradlew :examples:run
+ * then open http://localhost:8765. Pass --console to just print, without the web page.
  */
 public class BehaviorBasics {
-    static double armPosition = 0;
-    static int grabAttempts = 0;
-    static boolean batteryOk = true;
-    static boolean lowering = false;
-    static final long startTime = System.currentTimeMillis();
+    static double armPosition;
+    static int grabAttempts;
+    static boolean batteryOk;
+    static boolean lowering;
 
-    public static void main(String[] args) throws InterruptedException {
-        Node routine = sequence(
+    public static void main(String[] args) throws Exception {
+        if (Arrays.asList(args).contains("--console")) {
+            runInConsole();
+            return;
+        }
+        new TreeVisualizer(BehaviorBasics::routine)
+                .afterEachTick(BehaviorBasics::simulate)
+                .watch("armPosition", () -> armPosition)
+                .watch("grabAttempts", () -> grabAttempts)
+                .watch("batteryOk", () -> batteryOk)
+                .start();
+    }
+
+    /** Builds the tree. Restart in the web page calls this again, so it also resets the "robot". */
+    static Node routine() {
+        armPosition = 0;
+        grabAttempts = 0;
+        batteryOk = true;
+        lowering = false;
+
+        return sequence(
                 instant(() -> log("start")),
 
                 // Both at once; done when both succeed
                 parallel(
                         new MoveArm(1.0),
-                        sequence(delay(100), instant(() -> log("100 ms passed while the arm moves")))
+                        sequence(delay(500), instant(() -> log("500 ms passed while the arm moves")))
                 ),
 
                 // Fallback: try to grab (up to 3 tries); if that never works, do something else
@@ -51,20 +76,28 @@ public class BehaviorBasics {
                 ).alwaysSucceed(),
 
                 // Give up on something that takes too long
-                waitUntil(() -> false).withTimeout(200).alwaysSucceed(),
+                waitUntil(() -> false).withTimeout(1000).alwaysSucceed(),
                 instant(() -> log("done"))
         );
+    }
 
+    /** Pretend physics, run after every tick: the battery sags once the arm is halfway down. */
+    static void simulate() {
+        if (lowering && armPosition <= 0.5) {
+            batteryOk = false;
+        }
+    }
+
+    /** The same tree without the web page. main() plays the role of the OpMode's main loop. */
+    static void runInConsole() throws InterruptedException {
         BehaviorRunner runner = new BehaviorRunner();
-        runner.run(routine);
+        runner.run(routine());
 
         // Stand-in for the OpMode main loop. Never write a loop like this inside a behavior.
         while (!runner.isIdle()) {
             runner.tick();
+            simulate();
             Thread.sleep(20);
-            if (lowering && armPosition <= 0.5) {
-                batteryOk = false; // pretend the battery sagged
-            }
         }
     }
 
@@ -90,20 +123,21 @@ public class BehaviorBasics {
 
         @Override
         protected Status update() {
-            double step = Math.signum(target - armPosition) * 0.1;
-            armPosition = Math.abs(target - armPosition) <= 0.1 ? target : armPosition + step;
+            double step = Math.signum(target - armPosition) * 0.05;
+            armPosition = Math.abs(target - armPosition) <= 0.05 ? target : armPosition + step;
             return armPosition == target ? Status.SUCCESS : Status.RUNNING;
         }
 
         @Override
         protected void end(boolean interrupted) {
             log(interrupted
-                    ? String.format("arm stopped at %.1f (halted)", armPosition)
+                    ? String.format("arm stopped at %.2f (halted)", armPosition)
                     : "arm reached " + target);
         }
     }
 
+    /** Printed lines show up in the web page, next to the node that printed them. */
     static void log(String message) {
-        System.out.printf("%4d ms  %s%n", System.currentTimeMillis() - startTime, message);
+        System.out.println(message);
     }
 }

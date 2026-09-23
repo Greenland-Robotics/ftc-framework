@@ -21,7 +21,7 @@
  */
 
 // The team's modules, read from source by VS Code instead of as jars
-def sourceFolders = ['robot/src', 'framework/src', 'framework/test', 'pedro/src']
+def sourceFolders = ['robot/src', 'framework/src', 'framework/test', 'pedro/src', 'examples/general']
 
 def root = rootProject.projectDir
 def classpathDir = rootProject.file('.vscode/classpath')

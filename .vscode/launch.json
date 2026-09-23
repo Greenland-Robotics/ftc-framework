@@ -1,0 +1,14 @@
+{
+  // Run and Debug configurations (the ▷ in the sidebar). Breakpoints work in your nodes too.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Behavior tree visualizer",
+      "request": "launch",
+      "mainClass": "BehaviorBasics",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
