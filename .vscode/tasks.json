@@ -12,6 +12,16 @@
       "problemMatcher": []
     },
     {
+      "label": "Test framework",
+      "detail": "Run the behavior tree unit tests (no robot needed)",
+      "type": "shell",
+      "command": "./gradlew",
+      "windows": { "command": ".\\gradlew.bat" },
+      "args": [":framework:test"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
       "label": "Deploy to robot",
       "detail": "Install the app on the connected Control Hub / phone and start it",
       "type": "shell",

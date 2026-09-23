@@ -4,29 +4,29 @@ Code to learn from and copy. **Nothing in this folder is built into the robot ap
 
 | Folder | What it is | Needs |
 |--------|------------|-------|
-| [`general/`](general/) | How the command framework works on its own: combining commands and writing a custom one. Runs on any computer | Only the `framework` module |
-| [`ftc/`](ftc/) | FTC OpModes and commands built on `AutoBase`/`TeleOpBase`, Pedro Pathing and robot hardware | The FTC SDK, `pedro` and the `robot` module |
+| [`general/`](general/) | How behavior trees work on their own: composites, decorators, a reactive guard and a custom Action. Runs on any computer | Only the `framework` module |
+| [`ftc/`](ftc/) | A subsystem and OpModes built on `AutoBase`/`TeleOpBase`, Pedro Pathing and robot hardware | The FTC SDK, `pedro` and the `robot` module |
 
 ## general/
 | File | Shows |
 |------|-------|
-| [`CommandBasics.java`](general/CommandBasics.java) | `SeriesCommand`, `ParallelCommand`, `InstantCommand`, `SleepCommand`, `AwaitCommand`, `SwitchCommand`, `TimeoutCommand` and a custom command, driven by a stand-in main loop |
+| [`BehaviorBasics.java`](general/BehaviorBasics.java) | `sequence`, `parallel`, `selector` with `retry`, a `reactiveSequence` guard halting an arm, `withTimeout`, and a custom `Action`, driven by a stand-in main loop |
 
-Run it from the repository root to watch the commands execute:
+Run it from the repository root to watch the tree execute:
 ```bash
-javac -d build/examples framework/src/commands/*.java examples/general/CommandBasics.java
-java -cp build/examples CommandBasics
+javac -d build/examples $(find framework/src -name '*.java') examples/general/BehaviorBasics.java
+java -cp build/examples BehaviorBasics
 ```
 
 ## ftc/
-Copy these into `robot/src/robot/opmode/` (OpModes) or `robot/src/robot/commands/` (commands). Their `package` lines already match those folders.
+Copy these into `robot/src/robot/opmode/` (OpModes) or `robot/src/robot/subsystems/` (subsystems). Their `package` lines already match those folders.
 
 | File | What it is |
 |------|------------|
 | [`BoilerplateAuto.java`](ftc/BoilerplateAuto.java) | Empty Auto to start from |
 | [`BoilerplateTeleOp.java`](ftc/BoilerplateTeleOp.java) | Empty TeleOp to start from |
-| [`ExampleAuto.java`](ftc/ExampleAuto.java) | A complete Auto: paths from the Pedro visualizer, shooting and intaking commands |
-| [`ExampleTeleOp.java`](ftc/ExampleTeleOp.java) | A TeleOp with button-triggered command sequences |
-| [`ExampleCommand.java`](ftc/ExampleCommand.java) | Template for a custom command that uses robot hardware |
+| [`Intake.java`](ftc/Intake.java) | A complete subsystem: owns a motor and a sensor, offers `collect()`/`eject()`/`run()` and `hasSample()`, with a custom `Action` inside |
+| [`ExampleAuto.java`](ftc/ExampleAuto.java) | Scores, tries to grab another sample, and uses a `selector` to park if that fails |
+| [`ExampleTeleOp.java`](ftc/ExampleTeleOp.java) | A TeleOp with `onPress`, `toggleOnPress` and `whileHeld` bindings |
 
-The full examples use hardware and commands (`intake`, `servo`, `Shoot`, `StartIntake`) that a real robot would define, so they won't compile until you add those to your robot.
+`ExampleAuto` and `ExampleTeleOp` use `robot.intake`: copy `Intake.java` into `robot/src/robot/subsystems/` and register it in `Robot.java` (the comments there show how). Rename the hardware names (`"intake"`, `"intakeSensor"`) to match your robot's configuration.

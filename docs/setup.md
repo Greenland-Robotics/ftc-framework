@@ -75,6 +75,7 @@ All under **Terminal** → **Run Task…**, in or out of the container:
 | **Build** (`Ctrl/Cmd+Shift+B`) | Compiles the Robot Controller app |
 | **Connect to Control Hub (Wi-Fi)** | Connects `adb` to a Control Hub whose Wi-Fi network you have joined (not needed over USB) |
 | **Deploy to robot** | Installs the app on the connected Control Hub/phone and starts it |
+| **Test framework** | Runs the behavior tree unit tests (no robot needed) |
 | **Refresh VS Code classpath** | Updates VS Code's view of the libraries |
 | **Clean** | Deletes build outputs |
 

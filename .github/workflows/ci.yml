@@ -1,0 +1,41 @@
+# Runs the framework tests, builds the robot app, and checks that the FTC examples still compile.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # GitHub's Ubuntu runners include the Android SDK
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Test framework and build robot app
+        run: ./gradlew --console=plain :framework:test :robot:assembleDebug
+
+      - name: Compile the FTC examples
+        # Install the examples into robot/ the way the README describes, then compile
+        run: |
+          cp examples/ftc/Intake.java robot/src/robot/subsystems/
+          cp examples/ftc/Example*.java examples/ftc/Boilerplate*.java robot/src/robot/opmode/
+          sed -i \
+            -e 's|    // public final Intake intake;|    public final robot.subsystems.Intake intake;|' \
+            -e 's|        // intake = register(new Intake(hardwareMap));|        intake = register(new robot.subsystems.Intake(hardwareMap));|' \
+            robot/src/robot/Robot.java
+          grep -q "intake = register" robot/src/robot/Robot.java
+          ./gradlew --console=plain :robot:compileDebugJavaWithJavac
+
+      - name: Run the general example
+        run: |
+          javac -d build/examples $(find framework/src -name '*.java') examples/general/BehaviorBasics.java
+          java -cp build/examples BehaviorBasics
