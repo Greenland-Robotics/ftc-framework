@@ -1,0 +1,39 @@
+//
+// build.gradle in examples
+//
+// Builds and runs the laptop examples in general/ (plain Java, no Android), such as the
+// command tree visualizer:
+//
+//      ./gradlew :examples:run
+//
+// The FTC examples in ftc/ are only for copying into robot/, so they are not built.
+//
+apply plugin: 'application'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+sourceSets {
+    main {
+        java.srcDirs = ['general']
+        resources.srcDirs = ['general']
+        resources.includes = ['**/*.html']
+    }
+}
+
+dependencies {
+    implementation project(':framework')
+}
+
+application {
+    mainClass = 'CommandBasics'
+}
+
+run {
+    // The visualizer swaps each command's children for traced copies, which newer JDKs warn about
+    if (JavaVersion.current() >= JavaVersion.toVersion(26)) {
+        jvmArgs '--enable-final-field-mutation=ALL-UNNAMED'
+    }
+}

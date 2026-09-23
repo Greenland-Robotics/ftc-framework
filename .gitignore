@@ -48,6 +48,7 @@ captures/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/extensions.json
+!.vscode/launch.json
 
 # For Mac users
 .DS_Store

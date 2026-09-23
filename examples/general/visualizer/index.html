@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Command Tree</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --ink: #1c2330;
+    --muted: #677286;
+    --line: #dde1e8;
+    --soft: #eef0f4;
+    --pending: #9aa3b2;
+    --running: #2563eb;
+    --running-soft: #e5edff;
+    --finished: #15803d;
+    --finished-soft: #e3f4e8;
+    --interrupted: #c2410c;
+    --interrupted-soft: #fdeee4;
+    --error: #b91c1c;
+    --error-soft: #fde8e8;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11141a;
+      --panel: #191d25;
+      --ink: #e6e9ef;
+      --muted: #9099aa;
+      --line: #2c323d;
+      --soft: #222731;
+      --pending: #6b7384;
+      --running: #6d9bff;
+      --running-soft: #1b2a4a;
+      --finished: #4fc775;
+      --finished-soft: #16301f;
+      --interrupted: #f08a4b;
+      --interrupted-soft: #3a2415;
+      --error: #f36b6b;
+      --error-soft: #3a1818;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  button, select { font: inherit; color: inherit; }
+
+  header {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  h1 { font-size: 17px; margin: 0; font-weight: 650; }
+  .pill {
+    font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px;
+    background: var(--soft); color: var(--muted);
+  }
+  .pill.playing { background: var(--running-soft); color: var(--running); }
+  .pill.finished { background: var(--finished-soft); color: var(--finished); }
+  .pill.error, .pill.offline { background: var(--error-soft); color: var(--error); }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+  .controls button {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel); cursor: pointer;
+  }
+  .controls button:hover:not(:disabled) { background: var(--soft); }
+  .controls button:disabled { opacity: .45; cursor: default; }
+  .controls button.primary { background: var(--running); border-color: var(--running); color: #fff; min-width: 84px; }
+  .controls button.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--running); }
+  .controls select { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
+  .controls label { color: var(--muted); font-size: 13px; display: flex; gap: 6px; align-items: center; }
+
+  .layout {
+    display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px;
+    padding: 20px; align-items: start;
+  }
+  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); padding: 16px; } }
+
+  .tree-pane { overflow-x: auto; padding-bottom: 8px; }
+  #tree { width: max-content; min-width: 100%; }
+
+  aside { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 76px; }
+  @media (max-width: 900px) { aside { position: static; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .panel h2 {
+    font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); margin: 0 0 8px;
+  }
+  .step-text { font-family: var(--mono); font-size: 12.5px; }
+  .numbers { display: flex; gap: 20px; margin-top: 10px; }
+  .numbers div { display: flex; flex-direction: column; }
+  .numbers b { font-size: 20px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .numbers span { font-size: 12px; color: var(--muted); }
+  .error-box {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--error-soft); color: var(--error); font-family: var(--mono); font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .watches { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; }
+  .watches dt { color: var(--muted); }
+  .watches dd { margin: 0; font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+
+  #log {
+    font-family: var(--mono); font-size: 12px; max-height: 260px; overflow-y: auto;
+    margin: 0 -6px; padding: 0;
+    list-style: none;
+  }
+  #log li { display: grid; grid-template-columns: 3.2em 1fr; gap: 8px; padding: 2px 6px; border-radius: 6px; cursor: default; }
+  #log li:hover { background: var(--soft); }
+  #log li.empty { display: block; }
+  #log .when { color: var(--muted); text-align: right; }
+  #log .who { color: var(--muted); }
+  .empty { color: var(--muted); font-style: italic; }
+
+  .legend { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; font-size: 13px; }
+  .swatch { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--pending); background: var(--panel); }
+  .swatch.running { border-color: var(--running); background: var(--running-soft); }
+  .swatch.finished { border-color: var(--finished); background: var(--finished-soft); }
+  .swatch.interrupted { border-color: var(--interrupted); background: var(--interrupted-soft); }
+  .swatch.skipped { border-style: dashed; opacity: .6; }
+  .help { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+  .help code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+  kbd { font-family: var(--mono); font-size: 11px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; }
+
+  /* ---- Tree ---- */
+  .node { --c: var(--pending); --soft-c: transparent; }
+  .node.s-running { --c: var(--running); --soft-c: var(--running-soft); }
+  .node.s-finished { --c: var(--finished); --soft-c: var(--finished-soft); }
+  .node.s-interrupted { --c: var(--interrupted); --soft-c: var(--interrupted-soft); }
+  .node.s-error { --c: var(--error); --soft-c: var(--error-soft); }
+  .node.s-skipped { opacity: .5; }
+
+  .card {
+    background: var(--panel); border: 2px solid var(--c); border-radius: 10px;
+    padding: 8px 12px; min-width: 210px; max-width: 320px;
+    transition: border-color .15s, background-color .15s;
+  }
+  .node.s-running > .card, .node.s-finished > .card, .node.s-interrupted > .card, .node.s-error > .card {
+    background: var(--soft-c);
+  }
+  .node.s-skipped > .card { border-style: dashed; }
+  .node.hl > .card { outline: 3px solid var(--c); outline-offset: 2px; }
+
+  .card-head { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+  .node.s-running > .card .dot { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.5); opacity: .55; } }
+  .type { font-weight: 650; }
+  .badge { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--c); text-transform: uppercase; letter-spacing: .04em; }
+  .desc { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .stats { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .out { font-family: var(--mono); font-size: 12px; margin-top: 4px; }
+  .out:empty { display: none; }
+  .out div::before { content: "› "; color: var(--muted); }
+
+  /* A command with children is a box holding its own card and its children */
+  .node.composite {
+    border: 1.5px solid var(--line); border-radius: 14px; padding: 8px;
+    background: color-mix(in srgb, var(--soft) 45%, transparent);
+    transition: border-color .15s;
+  }
+  .node.composite.s-running { border-color: color-mix(in srgb, var(--running) 45%, var(--line)); }
+  .node.composite > .card { max-width: none; }
+  .kids { display: flex; gap: 10px; margin-top: 10px; }
+  .kids-series, .kids-wrapper, .kids-group { flex-direction: column; align-items: flex-start; gap: 0; padding-left: 14px; }
+  .kids-parallel, .kids-switch { flex-direction: row; align-items: flex-start; gap: 12px; padding-left: 14px; }
+  .kids-group { gap: 10px; }
+  .slot { position: relative; }
+  .edge {
+    font-size: 11px; font-weight: 650; color: var(--muted); margin: 0 0 4px 2px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .kids-series > .slot > .edge {
+    position: absolute; left: -22px; top: 10px; width: 16px; margin: 0; text-align: right;
+  }
+  .arrow { height: 18px; width: 2px; margin-left: 22px; background: var(--line); position: relative; }
+  .arrow::after {
+    content: ""; position: absolute; bottom: -1px; left: -4px;
+    border: 5px solid transparent; border-top-color: var(--line); border-bottom: 0;
+  }
+  .kids-parallel > .slot { padding-top: 6px; border-top: 3px solid var(--line); }
+  .kids-parallel > .slot:first-child::before {
+    content: "at the same time"; position: absolute; top: -20px; left: 0; white-space: nowrap;
+    font-size: 11px; color: var(--muted); font-weight: 650; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .kids-parallel { margin-top: 26px; }
+
+  .offline-banner {
+    display: none; margin: 16px 20px 0; padding: 10px 14px; border-radius: 10px;
+    background: var(--error-soft); color: var(--error);
+  }
+  body.offline .offline-banner { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Command tree</h1>
+  <span id="status" class="pill">connecting…</span>
+  <div class="controls">
+    <button id="step" title="Run one step (→)">Step</button>
+    <button id="play" class="primary" title="Play or pause (space)">Play</button>
+    <button id="restart" title="Build the routine again and start over (R)">Restart</button>
+    <label>Speed
+      <select id="period">
+        <option value="20">Real time: update every 20 ms</option>
+        <option value="100">Slow: every 100 ms</option>
+        <option value="250">Slower: every 250 ms</option>
+        <option value="1000">Very slow: every 1 s</option>
+      </select>
+    </label>
+  </div>
+</header>
+<div class="offline-banner">Can't reach the program. Is it still running? This page reconnects on its own.</div>
+
+<main class="layout">
+  <section class="tree-pane" aria-label="Command tree"><div id="tree"></div></section>
+
+  <aside>
+    <div class="panel">
+      <h2>Last step</h2>
+      <div id="last" class="step-text"></div>
+      <div class="numbers">
+        <div><b id="updates">0</b><span>update() calls</span></div>
+        <div><b id="elapsed">0.00 s</b><span>since start()</span></div>
+      </div>
+      <div id="error" class="error-box" hidden></div>
+    </div>
+
+    <div class="panel" id="watch-panel" hidden>
+      <h2>Robot state</h2>
+      <dl id="watches" class="watches"></dl>
+    </div>
+
+    <div class="panel">
+      <h2>Printed</h2>
+      <ul id="log"></ul>
+    </div>
+
+    <div class="panel">
+      <h2>How to read it</h2>
+      <div class="legend">
+        <span class="swatch"></span><span>Not started yet</span>
+        <span class="swatch running"></span><span>Running: its <code>loop()</code> is being called</span>
+        <span class="swatch finished"></span><span>Finished: <code>isFinished()</code> returned true</span>
+        <span class="swatch interrupted"></span><span>Stopped by its parent before finishing</span>
+        <span class="swatch skipped"></span><span>Skipped: its parent never started it</span>
+      </div>
+      <p class="help">
+        Each <code>update()</code>, the runner calls <code>loop()</code> and then <code>isFinished()</code> on the
+        root command. Commands with children pass those calls on, so the running (blue) commands
+        are the path the calls take this tick.
+      </p>
+      <p class="help">Keys: <kbd>→</kbd> step, <kbd>space</kbd> play/pause, <kbd>R</kbd> restart.</p>
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const treeEl = $("tree");
+  let state = null;
+  let generation = null;
+  let views = new Map();   // node id -> [{node, badge, stats, out, desc}]
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  // ---- Building the tree (once per restart) ----
+
+  function build(n) {
+    const node = el("div", "node k-" + n.kind);
+    node.dataset.id = n.id;
+    const card = el("div", "card");
+    const head = el("div", "card-head");
+    head.append(el("span", "dot"), el("span", "type", n.type));
+    const badge = el("span", "badge");
+    head.append(badge);
+    const desc = el("div", "desc");
+    const stats = el("div", "stats");
+    const out = el("div", "out");
+    card.append(head, desc, stats, out);
+    node.append(card);
+
+    if (!views.has(n.id)) views.set(n.id, []);
+    views.get(n.id).push({ node, badge, stats, out, desc });
+
+    if (n.children.length) {
+      node.classList.add("composite");
+      const kids = el("div", "kids kids-" + n.kind);
+      n.children.forEach((child, i) => {
+        if (n.kind === "series" && i > 0) kids.append(el("div", "arrow"));
+        const slot = el("div", "slot");
+        if (child.label) slot.append(el("div", "edge", child.label));
+        slot.append(build(child));
+        kids.append(slot);
+      });
+      node.append(kids);
+    }
+    return node;
+  }
+
+  // ---- Updating it (every poll) ----
+
+  const STATUS_TEXT = {
+    pending: "", running: "running", finished: "done", interrupted: "stopped", skipped: "skipped", error: "threw"
+  };
+
+  function update(n, errorNode) {
+    const status = n.id === errorNode ? "error" : n.status;
+    for (const v of views.get(n.id) || []) {
+      v.node.className = v.node.className.replace(/\bs-\w+/g, "").trim() + " s-" + status;
+      v.badge.textContent = STATUS_TEXT[status];
+      v.desc.textContent = n.description;
+      v.desc.hidden = !n.description;
+      const parts = [];
+      if (n.inits) {
+        parts.push("init " + n.inits, "loop " + n.loops);
+        if (n.ms != null) parts.push(seconds(n.ms));
+      }
+      v.stats.textContent = parts.join(" · ");
+      const lines = n.output.join("\n");
+      if (v.out.dataset.lines !== lines) {
+        v.out.dataset.lines = lines;
+        v.out.replaceChildren(...n.output.map((line) => el("div", null, line)));
+      }
+    }
+    n.children.forEach((child) => update(child, errorNode));
+  }
+
+  function names(n, map) {
+    map.set(n.id, n.type);
+    n.children.forEach((c) => names(c, map));
+    return map;
+  }
+
+  function seconds(ms) { return (ms / 1000).toFixed(2) + " s"; }
+
+  function render(s) {
+    if (s.generation !== generation) {
+      generation = s.generation;
+      views = new Map();
+      treeEl.replaceChildren(s.root ? build(s.root) : el("p", "empty", "No routine: see the error."));
+    }
+    if (s.root) update(s.root, s.errorNode);
+
+    const status = $("status");
+    status.className = "pill";
+    if (s.error) { status.textContent = "error"; status.classList.add("error"); }
+    else if (s.finished) { status.textContent = "finished"; status.classList.add("finished"); }
+    else if (s.playing) { status.textContent = "playing"; status.classList.add("playing"); }
+    else status.textContent = s.started ? "paused" : "ready";
+
+    const done = s.finished || !!s.error;
+    $("play").textContent = s.playing ? "Pause" : "Play";
+    $("play").disabled = done;
+    $("step").disabled = done;
+    $("step").textContent = s.started ? "Step: update()" : "Step: start()";
+    if (document.activeElement !== $("period")) $("period").value = String(s.periodMs);
+
+    $("last").textContent = s.lastAction;
+    $("updates").textContent = s.updates;
+    $("elapsed").textContent = seconds(s.elapsedMs);
+    $("error").hidden = !s.error;
+    $("error").textContent = s.error || "";
+
+    $("watch-panel").hidden = s.watches.length === 0;
+    $("watches").replaceChildren(...s.watches.flatMap((w) => [el("dt", null, w.name), el("dd", null, w.value)]));
+
+    renderLog(s);
+  }
+
+  let logKey = "";
+  function renderLog(s) {
+    const key = s.generation + ":" + s.log.length + ":" + (s.log.length ? s.log[s.log.length - 1].text + s.log[s.log.length - 1].ms : "");
+    if (key === logKey) return;
+    logKey = key;
+    const log = $("log");
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 20;
+    const typeOf = s.root ? names(s.root, new Map()) : new Map();
+    if (!s.log.length) {
+      log.replaceChildren(el("li", "empty", "Nothing printed yet."));
+      return;
+    }
+    log.replaceChildren(...s.log.map((line) => {
+      const li = el("li");
+      li.title = "update() #" + line.update;
+      li.append(el("span", "when", seconds(line.ms).replace(" s", "s")));
+      const text = el("span");
+      if (line.node >= 0) text.append(el("span", "who", typeOf.get(line.node) + ": "));
+      text.append(line.text);
+      li.append(text);
+      if (line.node >= 0) {
+        li.addEventListener("mouseenter", () => highlight(line.node, true));
+        li.addEventListener("mouseleave", () => highlight(line.node, false));
+      }
+      return li;
+    }));
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+
+  function highlight(id, on) {
+    for (const v of views.get(id) || []) {
+      v.node.classList.toggle("hl", on);
+      if (on) v.node.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    }
+  }
+
+  // ---- Talking to the program ----
+
+  async function poll() {
+    try {
+      const response = await fetch("api/state", { cache: "no-store" });
+      state = await response.json();
+      document.body.classList.remove("offline");
+      render(state);
+    } catch (e) {
+      document.body.classList.add("offline");
+      const status = $("status");
+      status.className = "pill offline";
+      status.textContent = "offline";
+    }
+    setTimeout(poll, 100);
+  }
+
+  function control(action, value) {
+    const query = "action=" + action + (value != null ? "&value=" + encodeURIComponent(value) : "");
+    fetch("api/control?" + query, { method: "POST" }).catch(() => {});
+  }
+
+  // Buttons give focus back to the page, so the space key keeps meaning play/pause
+  document.querySelectorAll(".controls button").forEach((b) => b.addEventListener("click", () => b.blur()));
+  $("step").addEventListener("click", () => control("step"));
+  $("play").addEventListener("click", () => control(state && state.playing ? "pause" : "play"));
+  $("restart").addEventListener("click", () => control("restart"));
+  $("period").addEventListener("change", (e) => control("period", e.target.value));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "SELECT" || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "ArrowRight") { control("step"); e.preventDefault(); }
+    else if (e.key === " ") { $("play").click(); e.preventDefault(); }
+    else if (e.key === "r" || e.key === "R") control("restart");
+  });
+
+  poll();
+})();
+</script>
+</body>
+</html>

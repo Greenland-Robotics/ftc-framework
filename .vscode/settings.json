@@ -8,7 +8,8 @@
   "java.project.sourcePaths": [
     "robot/src",
     "framework/src",
-    "pedro/src"
+    "pedro/src",
+    "examples/general"
   ],
   "java.project.referencedLibraries": [".vscode/classpath/*.jar"],
   "java.project.outputPath": "build/vscode",

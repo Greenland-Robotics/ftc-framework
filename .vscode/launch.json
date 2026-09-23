@@ -1,0 +1,14 @@
+{
+  // Run and Debug configurations (the ▷ in the sidebar). Breakpoints work in your commands too.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Command tree visualizer",
+      "request": "launch",
+      "mainClass": "CommandBasics",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}

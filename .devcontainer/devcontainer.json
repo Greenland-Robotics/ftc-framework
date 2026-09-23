@@ -17,6 +17,13 @@
     "source=ftc-framework-gradle,target=/home/vscode/.gradle,type=volume"
   ],
 
+  // The command tree visualizer (examples/general/visualizer) serves its web page on this port.
+  // VS Code forwards it, so http://localhost:8765 works in the browser on your computer.
+  "forwardPorts": [8765],
+  "portsAttributes": {
+    "8765": { "label": "Command tree visualizer", "onAutoForward": "openBrowserOnce" }
+  },
+
   // Download dependencies and export them so VS Code can resolve FTC SDK and Pedro classes
   "postCreateCommand": "./gradlew --console=plain :robot:vscodeClasspath",
 

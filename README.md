@@ -25,7 +25,7 @@ ftc-framework/
 | [`robot/`](robot/README.md) | The app installed on the robot: your OpModes, commands and hardware (`control/OpModeBase.java`) | All the time |
 | [`pedro/`](pedro/README.md) | `Constants.java` (motor names, odometry, tuned values), the **Tuning** OpMode, `FollowPath` | When setting up or tuning a robot |
 | [`framework/`](framework/README.md) | The command building blocks. Plain Java, no Android | Only to add new kinds of commands |
-| [`examples/`](examples/README.md) | General command examples you can run on a laptop, and FTC OpMode examples/boilerplates | Never: copy from it |
+| [`examples/`](examples/README.md) | General command examples you can run on a laptop (with a live web view of the command tree), and FTC OpMode examples/boilerplates | Never: copy from it |
 | [`docs/`](docs/setup.md) | Setup guide and licenses | Never |
 | `FtcRobotController/` | The FTC Robot Controller app shell | Never |
 | `open-workspace`, [`scripts/`](scripts/bootstrap.sh), [`.devcontainer/`](.devcontainer/) | The dev container and the scripts that set it up. See [setup option A](docs/setup.md#a-vs-code-dev-container-recommended) | Rarely |
@@ -43,7 +43,7 @@ Each folder's README explains what's inside and documents its classes.
 | Set drive motor names or odometry | [`Constants.java`](pedro/src/pedro/Constants.java) |
 | Tune Pedro Pathing | [`pedro/README.md`](pedro/README.md#tuning-a-new-robot) |
 | Look up a command (`SeriesCommand`, `AwaitCommand`, ...) | [`framework/README.md`](framework/README.md) |
-| Learn how commands work, without a robot | [`examples/general/`](examples/general/) |
+| Learn how commands work, without a robot | Run the [command tree visualizer](examples/README.md#running-the-command-tree-visualizer) |
 | Add a library | `build.dependencies.gradle` |
 
 ## Quick start
