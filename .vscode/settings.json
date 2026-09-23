@@ -1,0 +1,17 @@
+{
+  // Android Gradle projects can't be imported by VS Code's Java extension, so it runs in
+  // "unmanaged folder" mode. Libraries come from .vscode/classpath, which is filled by the
+  // "Refresh VS Code classpath" task (./gradlew :TeamCode:vscodeClasspath).
+  "java.import.gradle.enabled": false,
+  "java.import.maven.enabled": false,
+  "java.gradle.buildServer.enabled": "off",
+  "java.project.sourcePaths": ["TeamCode/src/main/java"],
+  "java.project.referencedLibraries": [".vscode/classpath/*.jar"],
+  "java.project.outputPath": "build/vscode",
+
+  "search.exclude": {
+    "**/build": true,
+    "**/.gradle": true,
+    ".vscode/classpath": true
+  }
+}

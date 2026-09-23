@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build",
+      "detail": "Compile the Robot Controller app (TeamCode + FtcRobotController)",
+      "type": "shell",
+      "command": "./gradlew",
+      "windows": { "command": ".\\gradlew.bat" },
+      "args": [":TeamCode:assembleDebug"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Deploy to robot",
+      "detail": "Install the app on the connected Control Hub / phone and start it",
+      "type": "shell",
+      "command": "adb shell monkey -p com.qualcomm.ftcrobotcontroller -c android.intent.category.LAUNCHER 1",
+      "dependsOn": "Install app",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install app",
+      "type": "shell",
+      "command": "./gradlew",
+      "windows": { "command": ".\\gradlew.bat" },
+      "args": [":TeamCode:installDebug"],
+      "hide": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Connect to Control Hub (Wi-Fi)",
+      "detail": "Connect adb to a Control Hub whose Wi-Fi network this computer has joined",
+      "type": "shell",
+      "command": "adb connect 192.168.43.1:5555",
+      "problemMatcher": []
+    },
+    {
+      "label": "Refresh VS Code classpath",
+      "detail": "Export library jars so VS Code can resolve FTC SDK and Pedro Pathing classes",
+      "type": "shell",
+      "command": "./gradlew",
+      "windows": { "command": ".\\gradlew.bat" },
+      "args": [":TeamCode:vscodeClasspath"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean",
+      "type": "shell",
+      "command": "./gradlew",
+      "windows": { "command": ".\\gradlew.bat" },
+      "args": ["clean"],
+      "problemMatcher": []
+    }
+  ]
+}

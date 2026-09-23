@@ -1,0 +1,36 @@
+/**
+ * vscode.gradle
+ *
+ * VS Code's Java extension cannot import Android Gradle projects directly, so the workspace
+ * settings in .vscode/ run it in "unmanaged folder" mode instead. This task gives it the
+ * libraries it needs by copying TeamCode's compile classpath (FTC SDK, Pedro Pathing,
+ * FtcRobotController and android.jar) into .vscode/classpath/.
+ *
+ * Run it after cloning and whenever dependencies change:
+ *
+ *      ./gradlew :TeamCode:vscodeClasspath
+ *
+ * (or run the "Refresh VS Code classpath" task in VS Code). Android Studio ignores this file.
+ */
+
+tasks.register('vscodeClasspath', Sync) {
+    group = 'ide'
+    description = 'Copies the TeamCode compile classpath into .vscode/classpath for VS Code.'
+
+    // Configured lazily: AGP only creates debugCompileClasspath once the project is evaluated
+    from(configurations.debugCompileClasspath.incoming.artifactView {
+        // Unpacks AARs and resolves project(':FtcRobotController') to its classes jar
+        attributes.attribute(Attribute.of('artifactType', String), 'android-classes-jar')
+    }.files)
+    from(androidComponents.sdkComponents.bootClasspath)
+    into(rootProject.file('.vscode/classpath'))
+
+    // Unpacked AARs are all named classes.jar, so give each a unique, readable name
+    eachFile { details ->
+        if (details.name == 'classes.jar') {
+            def library = details.file.parentFile.parentFile.name
+            details.name = "${library}-${details.file.absolutePath.md5().take(8)}.jar"
+        }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
