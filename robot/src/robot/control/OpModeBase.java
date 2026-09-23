@@ -1,41 +1,44 @@
 package robot.control;
 
-import com.pedropathing.follower.Follower;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-import pedro.Pedro;
-import commands.CommandRunner;
+import behavior.runtime.BehaviorRunner;
+import robot.Robot;
 
+/**
+ * Runs the main loop shared by every OpMode. Extend {@link AutoBase} or {@link TeleOpBase}
+ * rather than this class.
+ *
+ * <p>Every loop: subsystems update ({@code robot.periodic()}), then running behaviors tick, then
+ * the OpMode's own {@link #onLoop()}.
+ */
 public abstract class OpModeBase extends LinearOpMode {
-    public static volatile OpModeBase INSTANCE;
-    public Follower follower;
-    protected CommandRunner commandRunner;
-
-    protected abstract void initInternal();
-    protected abstract void loopInternal();
+    protected Robot robot;
+    protected final BehaviorRunner behaviors = new BehaviorRunner();
 
     @Override
-    public void runOpMode() {
-        initHardware();
-        follower = Pedro.createFollower(hardwareMap);
-        INSTANCE = this;
-        initInternal();
+    public final void runOpMode() {
+        robot = new Robot(hardwareMap);
+        onInit();
 
         waitForStart();
+        onStart();
 
-        while(opModeIsActive() && !isStopRequested()) {
+        while (opModeIsActive()) {
+            robot.periodic();
+            behaviors.tick();
+            onLoop();
             telemetry.update();
-            loopInternal();
         }
+        behaviors.cancelAll();
     }
 
-    // declare hardware here
-    private void initHardware() {
-        // init hardware here
-    }
+    /** After the robot is built, before start. */
+    protected abstract void onInit();
 
-    protected double getX() {return follower.getPose().getX();}
-    protected double getY() {return follower.getPose().getY();}
-    protected double getHeading() {return follower.getPose().getHeading();}
+    /** Once, when start is pressed. */
+    protected abstract void onStart();
 
+    /** Every loop, after behaviors tick. */
+    protected abstract void onLoop();
 }

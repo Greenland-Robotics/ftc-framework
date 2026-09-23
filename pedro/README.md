@@ -1,15 +1,15 @@
 # pedro
 
-Everything [Pedro Pathing](https://pedropathing.com) related: drivetrain and localizer configuration, the tuning OpModes, and the command that follows paths.
+Everything [Pedro Pathing](https://pedropathing.com) related: drivetrain and localizer configuration, the tuning OpModes, and the `Drive` subsystem that follows paths.
 
 All classes are in the `pedro` package, in [`src/pedro/`](src/pedro/).
 
 | File | What it is | Edit it? |
 |------|------------|----------|
 | [`Constants.java`](src/pedro/Constants.java) | Motor names/directions, odometry setup and tuned values | **Yes**: first thing to configure for a new robot, then fill in tuned values |
+| [`Drive.java`](src/pedro/Drive.java) | The drivetrain subsystem: follows paths, drives from the gamepad, knows the robot's pose | No |
+| [`FollowPath.java`](src/pedro/FollowPath.java) | The Action behind `drive.follow(...)` and `drive.driveTo(...)` | No |
 | [`Tuning.java`](src/pedro/Tuning.java) | The **Tuning** OpMode (in the Driver Station's "Pedro Pathing" group) | No |
-| [`FollowPath.java`](src/pedro/FollowPath.java) | A `Command` that drives a path | No |
-| [`Pedro.java`](src/pedro/Pedro.java) | Hands the running OpMode's `Follower` to commands like `FollowPath` | No |
 
 ## Tuning a new robot
 1. Set motor names, directions and odometry settings in `Constants.java` to match your Driver Station hardware configuration.
@@ -43,7 +43,7 @@ Central location for all tunable robot constants — motor names, directions, od
 Limits for velocity and acceleration during path following. Tune these to prevent wheel slip.
 
 #### `public static Follower createFollower(HardwareMap hardwareMap)`
-Builds the configured `Follower`. You don't call this directly: `OpModeBase` calls it through `Pedro.createFollower()`.
+Builds the configured `Follower`. You don't call this directly: [`Robot.java`](../robot/src/robot/Robot.java) uses it to create `robot.drive`.
 
 #### Adding your own constants
 Add static fields for servo positions, motor targets, PID coefficients, etc.:
@@ -56,15 +56,24 @@ public static int ARM_UP = 1200;
 
 ---
 
-## FollowPath
+## Drive
 
-**Purpose:**
-A `Command` that drives the robot along a path and finishes when the robot arrives.
+[`Drive`](src/pedro/Drive.java) is a [subsystem](../framework/README.md#subsystems) that owns Pedro's `Follower`, and is available as `robot.drive`. It updates the follower once per loop, so nothing else should call `follower.update()`.
+
+| Method | Returns | Does |
+|--------|---------|------|
+| `follow(path)` | behavior | Follows a prebuilt `PathChain` (e.g. from your Auto's `Paths` class); succeeds on arrival |
+| `driveTo(pose)` | behavior | Drives in a straight line to `pose` from **wherever the robot is when it starts** |
+| `drive(forward, strafe, turn)` | | Driver control; ignored while a path is running. `TeleOpBase` calls it for you |
+| `pose()` | `Pose` | Where the robot is |
+| `setStartingPose(pose)` | | Tell the localizer where the robot starts (during init) |
+| `pathBuilder()` | `PathBuilder` | Build paths for your `Paths` class |
 
 ```java
-new FollowPath(paths.toGoal)                         // a PathChain, e.g. from your Paths class
-new FollowPath(new Pose(0, 0, 0), new Pose(24, 0, 0)) // a straight line between two poses
-new FollowPath(start, control, end)                  // a Bézier curve through 3+ poses
+sequence(
+        robot.drive.follow(paths.toGoal),
+        robot.drive.driveTo(new Pose(72, 72, Math.toRadians(90))).withTimeout(3000)
+)
 ```
 
-Create `FollowPath` commands only after the OpMode has started building (inside `buildCommands()`/`initialize()`), because they need the OpMode's `Follower`.
+If a path behavior is halted part-way (a timeout, a released button, a selector moving on), the robot stops following the path.

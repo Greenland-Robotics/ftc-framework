@@ -48,6 +48,9 @@ captures/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/extensions.json
+/.project
+/.classpath
+/.settings/
 
 # For Mac users
 .DS_Store

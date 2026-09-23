@@ -5,31 +5,37 @@ This module is the Robot Controller app: the FTC SDK builds it, together with `f
 
 Code lives in [`src/robot/`](src/robot/):
 
-| Package | What goes here |
-|---------|----------------|
+| Path | What goes here |
+|------|----------------|
+| [`Robot.java`](src/robot/Robot.java) | Builds the robot from its subsystems. **The only place that uses the hardware map** |
+| [`subsystems/`](src/robot/subsystems/) | One class per mechanism (`Intake`, `Arm`...), owning its hardware |
 | [`opmode/`](src/robot/opmode/) | Your Autos and TeleOps. Start by copying a boilerplate from [`examples/ftc/`](../examples/ftc/) |
-| [`commands/`](src/robot/commands/) | Your custom `Command` classes (e.g. `Shoot`, `StartIntake`) |
-| [`control/`](src/robot/control/) | The OpMode base classes. Edit `OpModeBase.java` to add your robot's hardware |
+| [`control/`](src/robot/control/) | The OpMode base classes. You extend them; you rarely edit them |
 
-Examples and boilerplates to copy from are in [`examples/ftc/`](../examples/ftc/).
+Examples and boilerplates to copy from are in [`examples/ftc/`](../examples/ftc/). The behavior tree building blocks (`sequence`, `selector`, `Action`...) are documented in [`framework/README.md`](../framework/README.md).
 
 ## Writing your robot code
-1. **Configure [`Constants.java`](../pedro/src/pedro/Constants.java)** in the `pedro` module — set motor names, directions, and pod offsets to match your hardware config
-2. **Add your hardware** to `initHardware()` in `OpModeBase.java`
-3. **Create an OpMode** in the `opmode/` package:
-    - Autonomous: extend `AutoBase` — copy [`examples/ftc/BoilerplateAuto.java`](../examples/ftc/BoilerplateAuto.java) as your starting point
-    - TeleOp: extend `TeleOpBase` — copy [`examples/ftc/BoilerplateTeleOp.java`](../examples/ftc/BoilerplateTeleOp.java) as your starting point
-4. **Override the required abstract methods** (`buildCommands`, `initialize`, `runLoop`, etc.)
-5. **Build your command trees** using [`SeriesCommand`, `ParallelCommand`](../framework/README.md), [`FollowPath`](../pedro/README.md#followpath), and your own custom `Command` classes
-6. **Wire buttons to actions** in teleop using `ButtonAction`
-7. **Tune** using the `Tuning` opmode suite (see [`pedro/`](../pedro/README.md))
+1. **Configure the drivetrain** in [`Constants.java`](../pedro/src/pedro/Constants.java) (motor names, directions, odometry) and tune it with the **Tuning** OpMode. See [`pedro/`](../pedro/README.md).
+2. **Add a subsystem per mechanism** in `subsystems/`: it owns the motors and sensors and offers behaviors like `collect()` and checks like `hasSample()`. [`examples/ftc/Intake.java`](../examples/ftc/Intake.java) is a complete example.
+3. **Register each subsystem** in [`Robot.java`](src/robot/Robot.java): add a field and create it with `register(...)`.
+4. **Write OpModes** in `opmode/`:
+    - Autonomous: extend `AutoBase` and return the whole routine as one tree from `routine()`.
+    - TeleOp: extend `TeleOpBase` and connect buttons to behaviors in `bindControls()`.
+
+```
+OpMode (AutoBase / TeleOpBase)
+   │ uses robot.drive, robot.intake ...
+   ▼
+Robot ── creates ──► Subsystems (Drive, Intake, ...) ── own ──► motors, sensors
+   │                        │ hand out
+   │                        ▼
+   └─ periodic() ◄───── behavior trees (Nodes) run by the base class
+```
 
 ---
 
 ## WARNING: Do NOT write `while` loops
-Code that is written inside functions with `loop` in their name(`runLoop()`, `loop()`, etc.) are **automatically** run inside the main loop.
-You do NOT have to write a `while (opModeIsActive) {...}` inside of them. Doing so will break the functionality of the entire framework. 
-It is exceedingly rare that you would ever have to write one, if at all
+The base classes run the main loop and tick your behaviors for you. Code in behaviors and in `runLoop()` must return quickly: never write `while (opModeIsActive()) {...}` or call `sleep()` there, or the whole robot freezes. To wait, use `delay(ms)` or `waitUntil(...)`.
 
 ---
 
@@ -57,133 +63,79 @@ It is exceedingly rare that you would ever have to write one, if at all
   - `left_stick_y`
   - `right_stick_x`
 
-  These are forwarded to Pedro Pathing's `setTeleOpDrive()`. Using these inputs elsewhere in your teleop code means that one action will control both driving and whatever else you mapped it to. If you need to change or override the drive logic, see `TeleOpBase.loopInternal()`.
+  These are passed to `robot.drive.drive(...)`. Using these inputs elsewhere in your TeleOp means one stick controls both driving and whatever else you mapped it to. To change the mapping, override `driveWithGamepad()` in your TeleOp.
+
 
 ---
+
+## Robot
+
+[`Robot`](src/robot/Robot.java) is created by the base class before your OpMode's `initialize()`, and is available as `robot` in every OpMode.
+
+- **Fields** are your subsystems: `robot.drive`, `robot.intake`...
+- **`periodic()`** is called every loop and calls each registered subsystem's `periodic()`.
+- **`register(subsystem)`** adds a subsystem to that list. Forgetting it means its `periodic()` never runs.
 
 ## OpModeBase
 
-**Purpose:**
-Abstract base for all OpModes (autonomous or teleop).
-Handles hardware initialization and provides access to the Pedro Pathing follower and a shared `INSTANCE` reference used by commands.
+The shared main loop. Each loop it:
+1. updates every subsystem (`robot.periodic()`),
+2. ticks the running behaviors,
+3. calls the OpMode's own loop code, then updates telemetry.
 
-### Key Properties
-- `follower` — The Pedro Pathing `Follower` instance, used for all path following and pose tracking
-- `INSTANCE` — A static, volatile reference to the currently running opmode. Used by commands to access robot hardware via `OpModeBase.INSTANCE`
-
-### Main Methods
-
-#### `public double getX()`, `public double getY()`, `public double getHeading()`
-Returns the robot's current X position, Y position, or heading, respectively, as reported by the Pedro Pathing localizer. Available in any Auto or TeleOp that extends this class.
-
-#### `private void initHardware()`
-Initializes all hardware. You will need to modify this method for your specific robot — declare and configure motors, servos, and any other devices here.
-
-The following are **internal** methods. You won't need to interact with them directly.
-
-#### `protected abstract void initInternal()`
-Implemented by `AutoBase` and `TeleOpBase`. Runs during the init phase before `waitForStart()`.
-
-#### `protected abstract void loopInternal()`
-Implemented by `AutoBase` and `TeleOpBase`. Runs every iteration of the main loop after start.
-
-#### `public void runOpMode()`
-The main entrypoint for the opmode. Calls `initHardware()`, creates the follower, sets `INSTANCE`, calls `initInternal()`, waits for start, then runs the main loop.
-
----
+When the OpMode stops, running behaviors are halted so nothing keeps moving. Extend `AutoBase` or `TeleOpBase`, not this class.
 
 ## AutoBase
 
-**Purpose:**
-`AutoBase` is an abstract class for autonomous opmodes.
-It extends `OpModeBase` and integrates the command system, so your entire autonomous routine is expressed as a tree of commands that run automatically.
+Your whole autonomous is one behavior tree. Override:
 
-### Common Usage
-- Extend `AutoBase` in your autonomous opmode class.
-- Override `buildCommands()` to construct your command objects.
-- Override `initialize()` to set the robot's starting pose, build paths, and assemble the `CommandRunner`.
-- Override `runLoop()` for anything you want to run continuously alongside the commands (e.g., telemetry).
+| Method | When | Use it to |
+|--------|------|-----------|
+| `initialize()` | During init | Set the starting pose, build paths |
+| `routine()` (required) | During init, after `initialize()` | Return the whole Auto as one tree |
+| `runLoop()` | Every loop after start | Telemetry |
 
-### What does "Override" mean?
-Overriding means providing your own implementation of a method that is declared in a parent class:
 ```java
-@Override // Not strictly required but recommended for readability
-protected void initialize() {
-    follower.setStartingPose(new Pose(0, 0, Math.toRadians(0)));
-}
-```
-These methods are declared in `AutoBase` but *you* define what they actually do.
+@Autonomous(name = "Score and park")
+public class ScoreAndPark extends AutoBase {
+    private Paths paths;
 
-### Key Methods
+    @Override
+    protected void initialize() {
+        robot.drive.setStartingPose(Paths.START);
+        paths = new Paths(robot.drive);
+    }
 
-#### `protected abstract void buildCommands()`
-Override to instantiate your `Command` objects.
-```java
-@Override
-protected void buildCommands() {
-    driveToGoal = new SeriesCommand(
-        new FollowPath(paths.toGoal),
-        new Shoot()
-    );
+    @Override
+    protected Node routine() {
+        return sequence(
+                robot.drive.follow(paths.toGoal),
+                robot.intake.eject(),
+                robot.drive.follow(paths.park));
+    }
 }
 ```
 
-#### `protected abstract void initialize()`
-Override to set the starting pose, build your `Paths`, and create the `CommandRunner` with the full sequence.
-```java
-@Override
-protected void initialize() {
-    follower.setStartingPose(new Pose(26, 128, Math.toRadians(-38)));
-    paths = new Paths(follower);
-    commandRunner = new CommandRunner(new SeriesCommand(
-        driveToGoal,
-        intakeAndScore
-    ));
-}
-```
-
-#### `protected abstract void runLoop()`
-Override to add logic that runs every loop tick during the autonomous (alongside command execution). Great for telemetry:
-```java
-@Override
-protected void runLoop() {
-    telemetry.addData("x", getX());
-    telemetry.addData("y", getY());
-}
-```
-
-### The `Paths` inner class
-By convention, a `static class Paths` inside your Auto holds all `PathChain` objects. Generate path code from [Pedro Pathing Visualizer](https://visualizer.pedropathing.com) and paste it in here.
-
----
+By convention, a `static class Paths` inside the Auto holds its paths. Generate them with the [Pedro Pathing Visualizer](https://visualizer.pedropathing.com) and build them with `drive.pathBuilder()`.
 
 ## TeleOpBase
 
-**Purpose:**
-Base class for teleop opmodes. Integrates Pedro Pathing's teleop drive and the command system for button-triggered actions.
+Gamepad 1's sticks drive the robot out of the box (field-centric). Override:
 
-### Key Properties
-- `commandRunner` — A `CommandRunner` instance, available for use with `ButtonAction`
-- `driveMode` — Set to `false` to temporarily disable the driver-controlled drive (e.g., when a path command takes over)
+| Method | When | Use it to |
+|--------|------|-----------|
+| `initialize()` | During init | Anything else to set up |
+| `bindControls(controls)` (required) | During init | Connect buttons to behaviors |
+| `runLoop()` | Every loop after start | Telemetry |
+| `driveWithGamepad()` | Every loop after start | Change how the sticks drive the robot |
 
-### Key Methods
-
-#### `protected abstract void initialize()`
-Override to set up your `ButtonAction` objects and any other init logic.
-
-#### `protected abstract void runLoop()`
-Override to define your main teleop loop. Call `buttonAction.update(gamepad.button)` here for each action.
-
-### Built-in Drive Logic
-Each loop tick, `TeleOpBase` automatically calls:
 ```java
-follower.setTeleOpDrive(
-    -gamepad1.left_stick_y,
-    -gamepad1.left_stick_x,
-    -gamepad1.right_stick_x,
-    false
-);
+@Override
+protected void bindControls(Bindings controls) {
+    controls.onPress(() -> gamepad2.a, robot.intake.collect());       // runs until done
+    controls.whileHeld(() -> gamepad2.right_bumper, robot.intake.run()); // stops on release
+    controls.toggleOnPress(() -> gamepad2.x, robot.intake.run());     // press on, press off
+}
 ```
-This gives you full mecanum drive out of the box. Set `driveMode = false` to pause it (useful when a `FollowPath` command is running in teleop).
 
----
+While the robot is following a path (for example `robot.drive.driveTo(...)` bound to a button), the sticks are ignored; the driver gets control back when the path ends or is halted.

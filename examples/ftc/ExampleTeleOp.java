@@ -3,51 +3,28 @@ package robot.opmode;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import pedro.FollowPath;
-import robot.commands.StartIntake;
+import behavior.input.Bindings;
 import robot.control.TeleOpBase;
-import commands.ButtonAction;
-import commands.InstantCommand;
-import commands.SeriesCommand;
-import commands.SleepCommand;
 
-@TeleOp(name="Example TeleOp")
+/**
+ * Gamepad 1 drives (built into TeleOpBase); gamepad 2 runs the intake.
+ * Needs the example Intake subsystem registered in Robot.java as {@code intake}.
+ */
+@TeleOp(name = "Example TeleOp")
 public class ExampleTeleOp extends TeleOpBase {
-    private boolean driveMode = true;
-    private ButtonAction pathToCenter, shotSequence;
-
-    private void buildActions() {
-        pathToCenter = new ButtonAction(
-                new SeriesCommand(
-                        new InstantCommand(() -> driveMode = false),
-                        new FollowPath(
-                                new Pose(getX(), getY(), getHeading()),
-                                new Pose(72, 72, 0)
-                        )
-                ),commandRunner
-        );
-
-        shotSequence = new ButtonAction(
-                new SeriesCommand(
-                        new InstantCommand(() -> servo.setPosition(0.5)),
-                        new SleepCommand(1000),
-                        new StartIntake(),
-                        new InstantCommand(() -> {
-                            crServo.setPower(0.7);
-                        }),
-                        new InstantCommand(() -> servo.setPosition(0))
-                ), commandRunner
-        );
-    }
-
     @Override
-    protected void initialize() {
-        buildActions();
+    protected void bindControls(Bindings controls) {
+        controls.onPress(() -> gamepad2.a, robot.intake.collect().withTimeout(3000));
+        controls.onPress(() -> gamepad2.b, robot.intake.eject());
+        controls.toggleOnPress(() -> gamepad2.x, robot.intake.run());
+
+        // Hold Y to drive to the middle of the field; let go to take back control
+        controls.whileHeld(() -> gamepad1.y, robot.drive.driveTo(new Pose(72, 72, 0)));
     }
 
     @Override
     protected void runLoop() {
-        pathToCenter.update(gamepad1.a);
-        shotSequence.update(gamepad2.a);
+        telemetry.addData("Has sample", robot.intake.hasSample());
+        telemetry.addData("Pose", robot.drive.pose());
     }
 }
