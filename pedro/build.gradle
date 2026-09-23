@@ -1,0 +1,32 @@
+//
+// build.gradle in pedro
+//
+// Pedro Pathing configuration (Constants), the tuning OpModes and the FollowPath command.
+//
+apply plugin: 'com.android.library'
+
+android {
+    namespace = 'gcsrobotics.pedro'
+    compileSdk 34
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src']
+        }
+    }
+
+    defaultConfig {
+        minSdkVersion 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+apply from: '../build.dependencies.gradle'
+
+dependencies {
+    api project(':framework')
+}

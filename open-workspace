@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# Opens this repository in VS Code, inside the dev container, so you can build and deploy
+# without installing Java or the Android SDK.
+#
+# Usage: ./open-workspace [--yes]
+#   --yes  Install missing tools without asking
+#
+# The first run installs tools, creates a small VM and downloads the container image, which
+# takes a while. To shut the VM down afterwards: scripts/bootstrap.sh stop
+
+set -euo pipefail
+
+info() { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
+warn() { printf '\033[1;33mWarning:\033[0m %s\n' "$*" >&2; }
+
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bootstrap="$repo/scripts/bootstrap.sh"
+
+"$bootstrap" start "$@"
+
+# Point the docker commands below at the dev container's VM without changing your active context
+context="$("$bootstrap" docker-context)"
+if [[ -n "$context" ]]; then
+    export DOCKER_CONTEXT="$context"
+fi
+
+# Get the image here so progress is visible. If it can't be pulled (not published yet, or
+# private) and isn't already present, build it from the Dockerfile instead.
+image="$(sed -n 's/^ *"image": *"\([^"]*\)".*/\1/p' "$repo/.devcontainer/devcontainer.json")"
+if [[ -n "$image" ]]; then
+    info "Pulling $image"
+    if ! docker pull --platform linux/amd64 "$image"; then
+        if docker image inspect "$image" > /dev/null 2>&1; then
+            warn "Could not pull $image; using the copy already on this computer"
+        else
+            warn "Could not pull $image; building it from .devcontainer/Dockerfile instead (takes a few minutes)"
+            docker build --platform linux/amd64 -t "$image" "$repo/.devcontainer"
+        fi
+    fi
+fi
+
+# The dev-container URI names the folder and, when needed, the Docker context to use
+# (the Dev Containers extension ignores the active context for an already-running VS Code)
+host_path_json="$(printf '%s' "$repo" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+if [[ -n "$context" ]]; then
+    authority="{\"hostPath\":\"$host_path_json\",\"settings\":{\"context\":\"$context\"}}"
+else
+    authority="$repo"
+fi
+authority_hex="$(printf '%s' "$authority" | od -An -tx1 | tr -d ' \n')"
+
+info "Opening VS Code in the dev container"
+"$("$bootstrap" code-path)" --folder-uri "vscode-remote://dev-container+${authority_hex}/workspaces/$(basename "$repo")"

@@ -1,0 +1,34 @@
+//
+// build.gradle in robot
+//
+// The robot module is the Robot Controller app that gets installed on the robot: your
+// code plus the framework, pedro and FtcRobotController modules. Most of its build
+// definitions live in the shared 'build.common.gradle' (from the FTC SDK), which makes
+// it easier to integrate SDK updates. Add customizations here only if you really need them.
+//
+
+apply from: '../build.common.gradle'
+apply from: '../build.dependencies.gradle'
+apply from: '../gradle/vscode.gradle'
+
+android {
+    namespace = 'gcsrobotics.robot'
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src']
+            res.srcDirs = ['res']
+            manifest.srcFile 'AndroidManifest.xml'
+        }
+    }
+
+    packagingOptions {
+        jniLibs.useLegacyPackaging true
+    }
+}
+
+dependencies {
+    implementation project(':FtcRobotController')
+    implementation project(':framework')
+    implementation project(':pedro')
+}

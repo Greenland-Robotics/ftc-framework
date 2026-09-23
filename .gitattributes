@@ -1,0 +1,8 @@
+# Scripts run inside the Linux dev container and macOS, so keep them LF even on Windows checkouts
+* text=auto
+gradlew text eol=lf
+open-workspace text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.keystore binary

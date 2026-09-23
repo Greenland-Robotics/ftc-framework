@@ -1,0 +1,18 @@
+//
+// build.gradle in framework
+//
+// The command framework is plain Java with no Android or FTC SDK dependencies,
+// so it can be compiled and unit-tested on a normal JVM.
+//
+apply plugin: 'java-library'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+sourceSets {
+    main {
+        java.srcDirs = ['src']
+    }
+}

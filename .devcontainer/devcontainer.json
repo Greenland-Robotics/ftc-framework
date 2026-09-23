@@ -1,0 +1,31 @@
+{
+  // A ready-to-build FTC environment (JDK 17, Android SDK, adb), so nothing Java-related is
+  // needed on your computer. Open it with ./open-workspace.
+  "name": "FTC Framework",
+
+  // Prebuilt from .devcontainer/Dockerfile by .github/workflows/devcontainer-image.yml.
+  // If you change the Dockerfile in your own repository, point this at your own image, or
+  // replace it with: "build": { "dockerfile": "Dockerfile", "options": ["--platform=linux/amd64"] }
+  "image": "ghcr.io/greenland-robotics/ftc-framework/devcontainer:latest",
+  "runArgs": ["--platform=linux/amd64"],
+
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  // Keep Gradle and its downloads between container rebuilds
+  "mounts": [
+    "source=ftc-framework-gradle,target=/home/vscode/.gradle,type=volume"
+  ],
+
+  // Download dependencies and export them so VS Code can resolve FTC SDK and Pedro classes
+  "postCreateCommand": "./gradlew --console=plain :robot:vscodeClasspath",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle"
+      ]
+    }
+  }
+}

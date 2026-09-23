@@ -3,11 +3,11 @@
   "tasks": [
     {
       "label": "Build",
-      "detail": "Compile the Robot Controller app (TeamCode + FtcRobotController)",
+      "detail": "Compile the Robot Controller app (robot + framework + pedro + FtcRobotController)",
       "type": "shell",
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },
-      "args": [":TeamCode:assembleDebug"],
+      "args": [":robot:assembleDebug"],
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": []
     },
@@ -24,7 +24,7 @@
       "type": "shell",
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },
-      "args": [":TeamCode:installDebug"],
+      "args": [":robot:installDebug"],
       "hide": true,
       "problemMatcher": []
     },
@@ -41,7 +41,7 @@
       "type": "shell",
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },
-      "args": [":TeamCode:vscodeClasspath"],
+      "args": [":robot:vscodeClasspath"],
       "problemMatcher": []
     },
     {

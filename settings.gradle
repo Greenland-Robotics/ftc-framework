@@ -1,2 +1,4 @@
-include ':FtcRobotController'
-include ':TeamCode'
+include ':robot'              // Your robot code: the Robot Controller app installed on the robot
+include ':framework'          // Command framework (plain Java)
+include ':pedro'              // Pedro Pathing setup, tuning and path commands
+include ':FtcRobotController' // FTC SDK app shell
