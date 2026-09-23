@@ -85,3 +85,6 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+# JVM crash logs
+hs_err_pid*
+replay_pid*
