@@ -14,6 +14,11 @@ public final class Parallel extends Composite {
     private final ParallelPolicy policy;
     private final Status[] results;
 
+    /**
+     * A Parallel Node runs all other Nodes at the same time.
+     * @param policy Either ALL_SUCCEED or ANY_SUCCEEDS. ALL_SUCCEED = Waiting until all Nodes are done. ANY_SUCCEEDS: Waiting until one Node is done.
+     * @param children Nodes to run in parallel (at the same time)
+     */
     public Parallel(ParallelPolicy policy, Node... children) {
         super(children);
         this.policy = Objects.requireNonNull(policy, "policy");

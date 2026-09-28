@@ -11,6 +11,10 @@ import behavior.Node;
 public abstract class Composite implements Node {
     protected final List<Node> children;
 
+    /**
+     * Create a Composite node. A Composite node is 'composed' of several children Nodes.
+     * @param children Multiple Nodes. This is an interface and hence not normally exposed to a subsystem.
+     */
     protected Composite(Node... children) {
         List<Node> list = new ArrayList<>();
         for (Node child : children) {

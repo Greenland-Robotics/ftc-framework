@@ -17,6 +17,12 @@ abstract class OrderedComposite extends Composite {
     private final boolean reactive;
     private int current;
 
+    /**
+     * Runs a series of Nodes while Status is 'continueOn'. Can be a sequence of events.
+     * @param continueOn status of a condition. Essentially if the composite should continue to run.
+     * @param reactive Boolean; if true: restart the composite. if false: continue from the child that was running.
+     * @param children Sequence of nodes to run.
+     */
     OrderedComposite(Status continueOn, boolean reactive, Node... children) {
         super(children);
         this.continueOn = continueOn;
