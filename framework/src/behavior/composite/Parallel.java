@@ -10,7 +10,7 @@ import behavior.Status;
  * Ticks all children every loop. The {@link ParallelPolicy} decides when it is done; any
  * children still running at that point are halted. Finished children are not ticked again.
  */
-public final class Parallel extends Composite {
+public class Parallel extends Composite {
     private final ParallelPolicy policy;
     private final Status[] results;
 
