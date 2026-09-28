@@ -13,7 +13,7 @@ public abstract class Composite implements Node {
 
     /**
      * Create a Composite node. A Composite node is 'composed' of several children Nodes.
-     * @param children Multiple Nodes. For example, you could pass an Intake node and a Move Node.
+     * @param children Multiple Nodes. This is an interface and hence not normally exposed to a subsystem.
      */
     protected Composite(Node... children) {
         List<Node> list = new ArrayList<>();
