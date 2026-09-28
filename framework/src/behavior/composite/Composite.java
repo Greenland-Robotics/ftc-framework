@@ -11,6 +11,10 @@ import behavior.Node;
 public abstract class Composite implements Node {
     protected final List<Node> children;
 
+    /**
+     * Create a Composite node. A Composite node is 'composed' of several children Nodes.
+     * @param children Multiple Nodes. For example, you could pass an Intake node and a Move Node.
+     */
     protected Composite(Node... children) {
         List<Node> list = new ArrayList<>();
         for (Node child : children) {
