@@ -48,7 +48,7 @@ public class Parallel extends Composite {
         reset();
     }
 
-    private void reset() {
+    protected void reset() {
         Arrays.fill(results, Status.RUNNING);
     }
 }
