@@ -4,7 +4,8 @@
 // Builds and runs the laptop examples in general/ (plain Java, no Android), such as the
 // behavior tree visualizer:
 //
-//      ./gradlew :examples:run
+//      ./gradlew :examples:run       the behavior tree basics
+//      ./gradlew :examples:hive      drive a robot through the hive game with the keyboard
 //
 // The FTC examples in ftc/ are only for copying into robot/, so they are not built.
 //
@@ -31,7 +32,16 @@ application {
     mainClass = 'BehaviorBasics'
 }
 
-run {
+tasks.register('hive', JavaExec) {
+    group = 'application'
+    description = 'Drive a simulated robot through the hive game with the keyboard, with its behavior tree shown live.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'hive.HiveTeleOp'
+}
+
+tasks.withType(JavaExec).configureEach {
+    // Pass -Dvisualizer.port=8766 (another port) or -Dvisualizer.browser=false through to the program
+    systemProperties System.properties.findAll { it.key.toString().startsWith('visualizer.') }
     // The visualizer swaps each node's children for traced copies, which newer JDKs warn about
     if (JavaVersion.current() >= JavaVersion.toVersion(26)) {
         jvmArgs '--enable-final-field-mutation=ALL-UNNAMED'

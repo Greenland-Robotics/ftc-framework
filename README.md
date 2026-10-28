@@ -44,6 +44,7 @@ Each folder's README explains what's inside and documents its classes.
 | Tune Pedro Pathing | [`pedro/README.md`](pedro/README.md#tuning-a-new-robot) |
 | Look up a node (`sequence`, `selector`, `retry`, ...) | [`framework/README.md`](framework/README.md#node-reference) |
 | Learn how behavior trees work, without a robot | Run the [behavior tree visualizer](examples/README.md#running-the-behavior-tree-visualizer) |
+| Practice the TeleOp and watch its tree, without a robot | Run the [hive game](examples/README.md#the-hive-game) |
 | Add a library | `build.dependencies.gradle` |
 
 ## Quick start

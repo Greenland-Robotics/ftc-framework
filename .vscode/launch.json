@@ -12,6 +12,15 @@
       "projectName": "${workspaceFolderBasename}",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
+    },
+    {
+      "type": "java",
+      "name": "Hive game TeleOp",
+      "request": "launch",
+      "mainClass": "hive.HiveTeleOp",
+      "projectName": "${workspaceFolderBasename}",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
     }
   ]
 }

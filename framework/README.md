@@ -96,6 +96,7 @@ Conditions are plain lambdas (`BooleanSupplier`), so anything that returns a boo
 | `.invert()` | [`Invert`](src/behavior/decorator/Invert.java) | Swaps SUCCESS and FAILURE |
 | `.alwaysSucceed()` | [`AlwaysSucceed`](src/behavior/decorator/AlwaysSucceed.java) | Reports SUCCESS even on failure, e.g. "try for 2 s, then carry on regardless": `x.withTimeout(2000).alwaysSucceed()` |
 | `.onlyWhile(cond)` | [`Guard`](src/behavior/decorator/Guard.java) | Checks `cond` every tick; halts the node and fails as soon as it's false |
+| `.named("...")` | [`Named`](src/behavior/decorator/Named.java) | Changes nothing about how it runs; gives it a name the visualizer shows, e.g. `condition(() -> gamepad1.a).named("A held?")` |
 
 ---
 

@@ -1,37 +1,40 @@
 package visualizer;
 
-/** Just enough of a JSON writer for the visualizer's state, so it needs no libraries. */
-final class Json {
+/**
+ * Just enough of a JSON writer for the visualizer's state, so it needs no libraries. Also used to
+ * describe a {@link TreeVisualizer#scene scene}.
+ */
+public final class Json {
     private final StringBuilder out = new StringBuilder();
     private boolean needsComma;
 
-    Json begin() {
+    public Json begin() {
         comma();
         out.append('{');
         needsComma = false;
         return this;
     }
 
-    Json end() {
+    public Json end() {
         out.append('}');
         needsComma = true;
         return this;
     }
 
-    Json beginArray() {
+    public Json beginArray() {
         comma();
         out.append('[');
         needsComma = false;
         return this;
     }
 
-    Json endArray() {
+    public Json endArray() {
         out.append(']');
         needsComma = true;
         return this;
     }
 
-    Json name(String name) {
+    public Json name(String name) {
         comma();
         string(name);
         out.append(':');
@@ -39,18 +42,22 @@ final class Json {
         return this;
     }
 
-    Json field(String name, Object value) {
+    public Json field(String name, Object value) {
         return name(name).value(value);
     }
 
-    Json nullValue() {
+    public Json nullValue() {
         return value(null);
     }
 
-    Json value(Object value) {
+    public Json value(Object value) {
         comma();
         if (value == null) {
             out.append("null");
+        } else if (value instanceof Double || value instanceof Float) {
+            double number = ((Number) value).doubleValue();
+            // Two decimals is plenty for drawing, and keeps the scene small
+            out.append(Double.isFinite(number) ? String.valueOf(Math.round(number * 100) / 100.0) : "null");
         } else if (value instanceof Number || value instanceof Boolean) {
             out.append(value);
         } else {
