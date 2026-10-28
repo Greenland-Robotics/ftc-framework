@@ -164,7 +164,9 @@ final class WebServer {
         String head = "HTTP/1.1 200 OK\r\n"
                 + "Content-Type: " + response.type + "\r\n"
                 + "Cache-Control: no-store\r\n"
-                + "Connection: close\r\n\r\n";
+                + "Connection: close\r\n\r\n"
+                // If the connection drops, the page reconnects after half a second (browsers wait ~3 s by default)
+                + "retry: 500\n\n";
         out.write(head.getBytes(StandardCharsets.ISO_8859_1));
         out.flush();
         try {

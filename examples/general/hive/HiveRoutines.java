@@ -1,14 +1,19 @@
 package hive;
 
-import static util.MathUtil.wrapAngle;
-
 import static behavior.Behaviors.condition;
+import static behavior.Behaviors.instant;
 import static behavior.Behaviors.parallel;
 import static behavior.Behaviors.race;
 import static behavior.Behaviors.reactiveSelector;
 import static behavior.Behaviors.reactiveSequence;
+import static behavior.Behaviors.selector;
 import static behavior.Behaviors.sequence;
+import static behavior.Behaviors.succeed;
 import static behavior.Behaviors.waitUntil;
+import static util.MathUtil.wrapAngle;
+
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 import behavior.Node;
 import behavior.decorator.Timeout;
@@ -72,19 +77,28 @@ public final class HiveRoutines {
 
     /** Drives to the nearest spot in range of the up end of our hive, facing it. */
     public static Node lineUpShot(Robot robot, Field field) {
-        return robot.drive.driveTo(() -> shootingSpot(robot, field)).named("Line up a shot at our hive's up end");
+        ShotChoice choice = new ShotChoice(robot, field);
+        return robot.drive.driveTo(choice::spot).named("Line up a shot at our hive's up end");
     }
 
-    /** Drives over the nearest ball with the intake running, until it is inside. */
+    /**
+     * Drives over the nearest ball with the intake running, until it is inside. A ball it can't
+     * get within 5 s (stuck behind a hive, jammed in a corner) is skipped for a while, so the next
+     * try goes for a different one.
+     */
     public static Node collectBall(Robot robot, Field field) {
+        BallChoice choice = new BallChoice(robot, field);
         Node chase = race(
                 robot.intake.collect(),
-                robot.drive.driveTo(() -> towardNearestBall(robot, field)).named("Drive over the nearest ball")
+                robot.drive.driveTo(choice::approach).named("Drive over the nearest ball")
         );
-        // Give up on a ball that keeps getting away; the clock is the game's, so pausing pauses it
         return reactiveSequence(
-                condition(() -> field.ballsLeft() > 0).named("Any balls on the field?"),
-                new Timeout(chase, 5000, field.clock())
+                condition(choice::anyLeft).named("Any balls we haven't given up on?"),
+                // The clock is the game's, so pausing the game pauses the timeout too
+                selector(
+                        new Timeout(chase, 5000, field.clock()),
+                        instant(choice::giveUp).named("Give up on that ball for 15 s")
+                )
         ).named("Collect a ball");
     }
 
@@ -96,10 +110,20 @@ public final class HiveRoutines {
                         condition(() -> !robot.intake.isFull()).named("Room for another ball?"),
                         collectBall(robot, field)
                 ).repeatForever().alwaysSucceed().named("Fill up"),
-                condition(robot.intake::hasBall).named("Got any balls?"),
-                // Line up before every shot: when the hive pivots, the other end becomes the target
-                sequence(lineUpShot(robot, field), shootOne(robot))
-                        .repeatForever().alwaysSucceed().named("Shoot until empty")
+                // Every branch here succeeds, so the Auto never ends: with nothing to shoot, it goes looking again
+                selector(
+                        sequence(
+                                condition(robot.intake::hasBall).named("Got any balls?"),
+                                // Line up before every shot: when the hive pivots, the other end becomes the target
+                                // Can't get there in 4 s (another robot in the way)? Go collect, then try again
+                                sequence(
+                                        condition(robot.intake::hasBall).named("Any left?"),
+                                        new Timeout(lineUpShot(robot, field), 4000, field.clock()),
+                                        shootOne(robot)
+                                ).repeatForever().alwaysSucceed().named("Shoot until empty")
+                        ),
+                        succeed().named("Nothing to shoot: look again")
+                )
         ).repeatForever().named("Autonomous: collect, line up, score, repeat");
     }
 
@@ -157,13 +181,94 @@ public final class HiveRoutines {
         return null;
     }
 
-    /** A pose just past the nearest ball, facing it, so the intake sweeps over it. */
-    static Pose towardNearestBall(Robot robot, Field field) {
-        Ball ball = field.nearestBall(robot.body);
-        if (ball == null) return null;
-        Pose here = robot.drive.pose();
-        double angle = Math.atan2(ball.y - here.y, ball.x - here.x);
+    /**
+     * The spot a robot is lining up a shot from. It stays put while the robot drives there (worked
+     * out again from scratch each time it starts lining up, or if the target end changes), so the
+     * robot isn't chasing a spot that moves with it.
+     */
+    private static final class ShotChoice {
+        private final Robot robot;
+        private final Field field;
+        private Pose spot;
+        private int end = -1;
+        private double lastAsked = -1;
+
+        ShotChoice(Robot robot, Field field) {
+            this.robot = robot;
+            this.field = field;
+        }
+
+        Pose spot() {
+            Hive hive = field.hive(robot.alliance);
+            Pose here = robot.drive.pose();
+            int target = hive.endToShoot(here.x, here.y);
+            boolean startingOver = field.time() - lastAsked > 0.1;   // Not asked last loop: a new line-up
+            lastAsked = field.time();
+            if (spot == null || startingOver || target != end) {
+                spot = shootingSpot(robot, field);
+                end = target;
+            }
+            return spot;
+        }
+    }
+
+    /** Which ball a robot is going for, and the ones it gave up on and skips for now. */
+    private static final class BallChoice {
+        private static final double SKIP_SECONDS = 15;
+
+        private final Robot robot;
+        private final Field field;
+        private final Map<Ball, Double> skipUntil = new IdentityHashMap<>();
+        private Ball current;
+
+        BallChoice(Robot robot, Field field) {
+            this.robot = robot;
+            this.field = field;
+        }
+
+        boolean anyLeft() {
+            return field.nearestBall(robot.body, this::allowed) != null;
+        }
+
+        void giveUp() {
+            if (current != null) skipUntil.put(current, field.time() + SKIP_SECONDS);
+        }
+
+        private boolean allowed(Ball ball) {
+            Double until = skipUntil.get(ball);
+            return until == null || field.time() >= until;
+        }
+
+        /** Where to drive to pick up the nearest ball we haven't given up on, or null if there is none. */
+        Pose approach() {
+            current = field.nearestBall(robot.body, this::allowed);
+            return current == null ? null : pickUpPose(robot.drive.pose(), current, field);
+        }
+    }
+
+    /**
+     * A pose that puts the ball in the rollers. Straight at it from where the robot is, unless the
+     * ball is against a wall or a hive: then square on, facing the wall, so the robot's corners
+     * don't keep it out of reach.
+     */
+    static Pose pickUpPose(Pose here, Ball ball, Field field) {
         double reach = Body.SIZE / 2;   // The robot's center this far from the ball puts the ball in the rollers
-        return new Pose(ball.x - Math.cos(angle) * reach, ball.y - Math.sin(angle) * reach, angle);
+        double direct = Math.atan2(ball.y - here.y, ball.x - here.x);
+        Pose best = null;
+        double bestCost = Double.MAX_VALUE;
+        double[] headings = {direct, 0, Math.PI / 2, Math.PI, -Math.PI / 2};
+        for (int i = 0; i < headings.length; i++) {
+            double heading = headings[i];
+            double x = ball.x - Math.cos(heading) * reach;
+            double y = ball.y - Math.sin(heading) * reach;
+            if (!field.canStand(x, y, heading)) continue;
+            // Prefer driving straight at it; otherwise the square-on approach closest to the robot
+            double cost = (i == 0 ? 0 : 30) + here.distanceTo(x, y);
+            if (cost < bestCost) {
+                bestCost = cost;
+                best = new Pose(x, y, wrapAngle(heading));
+            }
+        }
+        return best != null ? best : new Pose(ball.x - Math.cos(direct) * reach, ball.y - Math.sin(direct) * reach, direct);
     }
 }

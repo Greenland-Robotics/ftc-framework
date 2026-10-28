@@ -18,9 +18,17 @@ public final class Drive implements Subsystem {
     private static final double HEADING_TOLERANCE = Math.toRadians(3);
 
     private final Body body;
+    private final Router router;
 
-    Drive(Body body) {
+    /** Finds the way around obstacles: given where the robot is and where it is going, where to head now. */
+    public interface Router {
+        /** {@code goal} itself if the way is clear, otherwise a waypoint to drive to first. */
+        Pose next(Pose here, Pose goal);
+    }
+
+    Drive(Body body, Router router) {
         this.body = body;
+        this.router = router;
     }
 
     public Pose pose() {
@@ -33,8 +41,9 @@ public final class Drive implements Subsystem {
     }
 
     /**
-     * Drives to a pose and succeeds when it is there. The target is read every loop, so it can
-     * move (like a rolling ball); while it is null the robot waits in place.
+     * Drives to a pose and succeeds when it is there, going around obstacles on the way. The
+     * target is read every loop, so it can move (like a rolling ball); while it is null the robot
+     * waits in place.
      */
     public Node driveTo(Supplier<Pose> target) {
         return new DriveTo(target);
@@ -83,17 +92,20 @@ public final class Drive implements Subsystem {
                 stop();
                 return Status.RUNNING;
             }
-            double dx = goal.x - body.x;
-            double dy = goal.y - body.y;
+            // Head for the next waypoint around anything in the way; only the goal itself counts as arriving
+            Pose next = router.next(body.pose(), goal);
+            boolean detour = next != goal;
+            double dx = next.x - body.x;
+            double dy = next.y - body.y;
             double distance = Math.hypot(dx, dy);
-            double headingError = angleError(goal.heading, body.heading);
-            if (distance < POSITION_TOLERANCE && Math.abs(headingError) < HEADING_TOLERANCE) {
+            double headingError = angleError(next.heading, body.heading);
+            if (!detour && distance < POSITION_TOLERANCE && Math.abs(headingError) < HEADING_TOLERANCE) {
                 stop();
                 return Status.SUCCESS;
             }
 
-            // Proportional control toward the goal, turned from field directions into robot ones
-            double speed = distance < POSITION_TOLERANCE ? 0 : clamp(distance * 0.06, 0.12, 1);
+            // Proportional control toward it (full speed through waypoints), turned from field directions into robot ones
+            double speed = detour ? 1 : distance < POSITION_TOLERANCE ? 0 : clamp(distance * 0.06, 0.12, 1);
             double fieldX = distance == 0 ? 0 : dx / distance * speed;
             double fieldY = distance == 0 ? 0 : dy / distance * speed;
             double[] move = toRobotFrame(fieldX, fieldY, body.heading);

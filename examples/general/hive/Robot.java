@@ -11,10 +11,10 @@ public final class Robot {
 
     final Body body;
 
-    Robot(Body body, Clock clock) {
+    Robot(Body body, Clock clock, Drive.Router router) {
         this.body = body;
         this.alliance = body.alliance;
-        this.drive = new Drive(body);
+        this.drive = new Drive(body, router);
         this.intake = new Intake(body);
         this.shooter = new Shooter(body, clock);
     }

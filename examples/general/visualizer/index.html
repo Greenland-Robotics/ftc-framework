@@ -617,14 +617,20 @@
 
   // The program pushes its state (10 times a second) and its scene (up to 30) over one
   // connection, so a slow link (like a dev container's port forwarding) only costs once
+  let source = null;
+  let lastEvent = 0;
   function connect() {
-    const source = new EventSource("api/stream");
+    if (source) source.close();
+    source = new EventSource("api/stream");
+    lastEvent = Date.now();
     source.addEventListener("state", (e) => {
+      lastEvent = Date.now();
       state = JSON.parse(e.data);
       document.body.classList.remove("offline");
       render(state);
     });
     source.addEventListener("scene", (e) => {
+      lastEvent = Date.now();
       latestScene = JSON.parse(e.data);
       if (!sceneFrame) sceneFrame = requestAnimationFrame(() => { sceneFrame = 0; drawScene(latestScene); });
     });
@@ -928,6 +934,9 @@
 
   applySide();
   connect();
+  // The program sends something at least every 0.2 s; a connection that goes quiet for longer
+  // (port forwarding can stall one without closing it) is replaced instead of waited on
+  setInterval(() => { if (Date.now() - lastEvent > 1500) connect(); }, 500);
 })();
 </script>
 </body>

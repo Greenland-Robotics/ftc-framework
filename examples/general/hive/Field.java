@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Predicate;
 
 import behavior.runtime.Clock;
 
@@ -76,7 +77,7 @@ public final class Field {
         Body body = new Body(alliance, x, y, heading, speedScale);
         body.held.add(new Ball(false, x, y));
         bodies.add(body);
-        return new Robot(body, clock());
+        return new Robot(body, clock(), this::route);
     }
 
     /** Seconds since the match started. */
@@ -105,6 +106,21 @@ public final class Field {
         return hive(alliance).pivots * Hive.PIVOT_POINTS;
     }
 
+    /** Whether a robot can be at (x, y) facing {@code heading}: its turned square inside the walls, clear of the hives. */
+    boolean canStand(double x, double y, double heading) {
+        double half = halfExtent(heading);
+        if (x < half - 0.5 || y < half - 0.5 || x > SIZE - half + 0.5 || y > SIZE - half + 0.5) return false;
+        for (Hive hive : hives) {
+            if (hive.pushOut(x, y, ROBOT_RADIUS - 0.5) != null) return false;
+        }
+        return true;
+    }
+
+    /** How far a robot's turned square reaches from its center along x (and along y). */
+    private static double halfExtent(double heading) {
+        return Body.SIZE / 2 * (Math.abs(Math.cos(heading)) + Math.abs(Math.sin(heading)));
+    }
+
     /** Whether a robot centered at (x, y) is at least {@code margin} from the walls and the hives. */
     boolean isClear(double x, double y, double margin) {
         if (x < margin || y < margin || x > SIZE - margin || y > SIZE - margin) return false;
@@ -119,18 +135,19 @@ public final class Field {
     }
 
     /**
-     * The ball a robot should go for next: the closest one, avoiding balls right next to another
-     * robot or behind a hive (it drives straight there). Null if there are none.
+     * The ball a robot should go for next: the closest of the {@code allowed} ones, avoiding balls
+     * right next to another robot or behind a hive (it drives straight there). Null if there are none.
      */
-    Ball nearestBall(Body robot) {
+    Ball nearestBall(Body robot, Predicate<Ball> allowed) {
         Ball best = null;
         double bestCost = Double.MAX_VALUE;
         for (Ball ball : loose) {
+            if (!allowed.test(ball)) continue;
             double cost = distance(robot.x, robot.y, ball.x, ball.y);
             for (Body other : bodies) {
                 if (other != robot && distance(other.x, other.y, ball.x, ball.y) < 20) cost += 60;
             }
-            if (hiveInTheWay(robot.x, robot.y, ball.x, ball.y)) cost += 80;
+            if (hiveInTheWay(robot.x, robot.y, ball.x, ball.y) != null) cost += 80;
             if (cost < bestCost) {
                 bestCost = cost;
                 best = ball;
@@ -139,18 +156,43 @@ public final class Field {
         return best;
     }
 
-    /** Whether a robot driving straight from one point to another would run into a hive. */
-    private boolean hiveInTheWay(double fromX, double fromY, double toX, double toY) {
+    /** The hive a robot driving straight from one point to another would run into, or null. */
+    private Hive hiveInTheWay(double fromX, double fromY, double toX, double toY) {
         double length = distance(fromX, fromY, toX, toY);
         int samples = (int) Math.ceil(length / 4);
         for (int i = 1; i < samples; i++) {
             double x = fromX + (toX - fromX) * i / samples;
             double y = fromY + (toY - fromY) * i / samples;
             for (Hive hive : hives) {
-                if (hive.pushOut(x, y, ROBOT_RADIUS - 2) != null) return true;
+                if (hive.pushOut(x, y, ROBOT_RADIUS - 2) != null) return hive;
             }
         }
-        return false;
+        return null;
+    }
+
+    /**
+     * A simple way around the hives, for {@link Drive#driveTo}: if a hive is in the way, first
+     * drive along its side to just past its nearer end, then cross over. Returns {@code goal}
+     * itself when the way is clear.
+     */
+    Pose route(Pose here, Pose goal) {
+        Hive hive = hiveInTheWay(here.x, here.y, goal.x, goal.y);
+        if (hive == null) return goal;
+        double clearance = ROBOT_RADIUS + 4;
+        // Past the top or the bottom end, whichever is the shorter way round
+        double topY = hive.y + Hive.LENGTH / 2 + clearance;
+        double bottomY = hive.y - Hive.LENGTH / 2 - clearance;
+        double endY = Math.abs(here.y - topY) + Math.abs(goal.y - topY)
+                <= Math.abs(here.y - bottomY) + Math.abs(goal.y - bottomY) ? topY : bottomY;
+        double side = Math.signum(here.x - hive.x);
+        if (side == 0) side = 1;
+        double sideX = hive.x + side * (Hive.WIDTH / 2 + clearance);
+        boolean pastEnd = Math.abs(here.y - hive.y) >= Hive.LENGTH / 2 + clearance - 2;
+        if (!pastEnd) return new Pose(sideX, endY, goal.heading);
+        // Past the end: cross to the goal's side of the hive
+        double goalSide = Math.signum(goal.x - hive.x);
+        if (goalSide == 0) goalSide = 1;
+        return new Pose(hive.x + goalSide * (Hive.WIDTH / 2 + clearance), endY, goal.heading);
     }
 
     // ---- Simulation ----
@@ -189,7 +231,7 @@ public final class Field {
         body.heading = wrapAngle(body.heading + body.omega * DT);
 
         // Walls: keep the whole (turned) square inside the field
-        double half = Body.SIZE / 2 * (Math.abs(Math.cos(body.heading)) + Math.abs(Math.sin(body.heading)));
+        double half = halfExtent(body.heading);
         body.x = clamp(body.x, half, SIZE - half);
         body.y = clamp(body.y, half, SIZE - half);
 

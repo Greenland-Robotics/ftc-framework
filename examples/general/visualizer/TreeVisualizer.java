@@ -236,7 +236,10 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
                     tick();
                 } else if (playing && now >= nextTick) {
                     tick();
-                    nextTick = now + periodMs * 1_000_000L;
+                    // Keep a steady rate (a late tick doesn't push back the rest), but don't rush to
+                    // catch up after a pause or a long hiccup
+                    long period = periodMs * 1_000_000L;
+                    nextTick = nextTick + period < now - 5 * period ? now + period : nextTick + period;
                 }
                 if (finished || error != null) {
                     playing = false;
