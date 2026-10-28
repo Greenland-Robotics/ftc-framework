@@ -463,7 +463,7 @@
     return node;
   }
 
-  // ---- Updating it (every poll) ----
+  // ---- Updating it (every state update) ----
 
   const STATUS_TEXT = {
     idle: "", running: "running", success: "success", failure: "failure", halted: "halted", error: "threw"
@@ -615,19 +615,26 @@
 
   // ---- Talking to the program ----
 
-  async function poll() {
-    try {
-      const response = await fetch("api/state", { cache: "no-store" });
-      state = await response.json();
+  // The program pushes its state (10 times a second) and its scene (up to 30) over one
+  // connection, so a slow link (like a dev container's port forwarding) only costs once
+  function connect() {
+    const source = new EventSource("api/stream");
+    source.addEventListener("state", (e) => {
+      state = JSON.parse(e.data);
       document.body.classList.remove("offline");
       render(state);
-    } catch (e) {
+    });
+    source.addEventListener("scene", (e) => {
+      latestScene = JSON.parse(e.data);
+      if (!sceneFrame) sceneFrame = requestAnimationFrame(() => { sceneFrame = 0; drawScene(latestScene); });
+    });
+    source.addEventListener("error", () => {
+      // EventSource reconnects by itself
       document.body.classList.add("offline");
       const status = $("status");
       status.className = "pill offline";
       status.textContent = "offline";
-    }
-    setTimeout(poll, 100);
+    });
   }
 
   function control(action, value) {
@@ -811,7 +818,6 @@
       applySide();
     }
     $("scene-panel").hidden = !s.hasScene;
-    if (s.hasScene && !sceneStarted) { sceneStarted = true; pollScene(); }
 
     const note = !s.hasScene ? ""
         : s.error ? ""
@@ -847,7 +853,8 @@
 
   // ---- Scene: a picture the program draws, like the field ----
 
-  let sceneStarted = false;
+  let latestScene = null;
+  let sceneFrame = 0;
   const colors = new Map();
   const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
   darkQuery.addEventListener("change", () => colors.clear());
@@ -859,17 +866,6 @@
       colors.set(name, value || name);   // Not one of ours: a CSS color like "#ff0000"
     }
     return colors.get(name);
-  }
-
-  async function pollScene() {
-    try {
-      const response = await fetch("api/scene", { cache: "no-store" });
-      const scene = await response.json();
-      if (scene) drawScene(scene);
-    } catch (e) {
-      // The state poll shows that the program is offline
-    }
-    setTimeout(pollScene, state && state.playing ? 33 : 150);
   }
 
   function drawScene(scene) {
@@ -931,7 +927,7 @@
   }
 
   applySide();
-  poll();
+  connect();
 })();
 </script>
 </body>

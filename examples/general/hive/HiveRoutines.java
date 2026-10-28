@@ -1,5 +1,7 @@
 package hive;
 
+import static util.MathUtil.wrapAngle;
+
 import static behavior.Behaviors.condition;
 import static behavior.Behaviors.parallel;
 import static behavior.Behaviors.race;
@@ -149,7 +151,7 @@ public final class HiveRoutines {
                 double angle = toRobot + sign * step * Math.toRadians(5);
                 double x = cupX + Math.cos(angle) * distance;
                 double y = cupY + Math.sin(angle) * distance;
-                if (field.isClear(x, y, 12)) return new Pose(x, y, Drive.wrap(angle + Math.PI));
+                if (field.isClear(x, y, 12)) return new Pose(x, y, wrapAngle(angle + Math.PI));
             }
         }
         return null;

@@ -1,5 +1,10 @@
 package hive;
 
+import static util.MathUtil.angleError;
+import static util.MathUtil.clamp;
+import static util.MathUtil.clampPower;
+import static util.MathUtil.toRobotFrame;
+
 import java.util.function.Supplier;
 
 import behavior.Action;
@@ -36,22 +41,13 @@ public final class Drive implements Subsystem {
     }
 
     private void set(double forward, double strafe, double turn) {
-        body.forward = clamp(forward);
-        body.strafe = clamp(strafe);
-        body.turn = clamp(turn);
+        body.forward = clampPower(forward);
+        body.strafe = clampPower(strafe);
+        body.turn = clampPower(turn);
     }
 
     private void stop() {
         set(0, 0, 0);
-    }
-
-    static double clamp(double value) {
-        return Math.max(-1, Math.min(1, value));
-    }
-
-    /** -π..π */
-    static double wrap(double angle) {
-        return Math.atan2(Math.sin(angle), Math.cos(angle));
     }
 
     private final class DriveWithSticks extends Action {
@@ -90,19 +86,18 @@ public final class Drive implements Subsystem {
             double dx = goal.x - body.x;
             double dy = goal.y - body.y;
             double distance = Math.hypot(dx, dy);
-            double headingError = wrap(goal.heading - body.heading);
+            double headingError = angleError(goal.heading, body.heading);
             if (distance < POSITION_TOLERANCE && Math.abs(headingError) < HEADING_TOLERANCE) {
                 stop();
                 return Status.SUCCESS;
             }
 
             // Proportional control toward the goal, turned from field directions into robot ones
-            double speed = distance < POSITION_TOLERANCE ? 0 : Math.max(0.12, Math.min(1, distance * 0.06));
+            double speed = distance < POSITION_TOLERANCE ? 0 : clamp(distance * 0.06, 0.12, 1);
             double fieldX = distance == 0 ? 0 : dx / distance * speed;
             double fieldY = distance == 0 ? 0 : dy / distance * speed;
-            double c = Math.cos(body.heading);
-            double s = Math.sin(body.heading);
-            set(fieldX * c + fieldY * s, -fieldX * s + fieldY * c, headingError * 1.6);
+            double[] move = toRobotFrame(fieldX, fieldY, body.heading);
+            set(move[0], move[1], headingError * 1.6);
             return Status.RUNNING;
         }
 

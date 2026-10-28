@@ -1,5 +1,7 @@
 package hive;
 
+import static util.MathUtil.distance;
+
 import java.util.Locale;
 
 import visualizer.Json;
@@ -78,7 +80,7 @@ final class FieldDrawing {
         double[] front = body.toField(Body.SIZE / 2, 0);
         double[] landing = body.toField(Body.SIZE / 2 + Field.SHOT_RANGE, 0);
         int end = hive.endToShoot(body.x, body.y);
-        boolean onTarget = Math.hypot(landing[0] - hive.cupX(end), landing[1] - hive.cupY(end)) <= Hive.CUP_RADIUS - 1;
+        boolean onTarget = distance(landing[0], landing[1], hive.cupX(end), hive.cupY(end)) <= Hive.CUP_RADIUS - 1;
         String color = onTarget ? "good" : "muted";
         line(color, 0.5, new double[] {1.2, 1.2}, front[0], front[1], landing[0], landing[1]);
         circle(landing[0], landing[1], 2, null, color, 0.5);

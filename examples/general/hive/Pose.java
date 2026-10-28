@@ -1,5 +1,7 @@
 package hive;
 
+import static util.MathUtil.distance;
+
 /** Where a robot is on the field: inches from the bottom-left corner, heading in radians (0 = facing right). */
 public final class Pose {
     public final double x;
@@ -13,7 +15,7 @@ public final class Pose {
     }
 
     public double distanceTo(double otherX, double otherY) {
-        return Math.hypot(otherX - x, otherY - y);
+        return distance(x, y, otherX, otherY);
     }
 
     @Override

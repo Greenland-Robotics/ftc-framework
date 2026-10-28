@@ -1,5 +1,8 @@
 package hive;
 
+import static util.MathUtil.toFieldFrame;
+import static util.MathUtil.toRobotFrame;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,8 +50,12 @@ final class Body {
 
     /** Field position of a point given in the robot's frame (forward, left). */
     double[] toField(double forwardIn, double leftIn) {
-        double c = Math.cos(heading);
-        double s = Math.sin(heading);
-        return new double[] {x + forwardIn * c - leftIn * s, y + forwardIn * s + leftIn * c};
+        double[] offset = toFieldFrame(forwardIn, leftIn, heading);
+        return new double[] {x + offset[0], y + offset[1]};
+    }
+
+    /** Where a field point is as seen from the robot: {forward, left}, in inches. */
+    double[] toRobot(double fieldX, double fieldY) {
+        return toRobotFrame(fieldX - x, fieldY - y, heading);
     }
 }

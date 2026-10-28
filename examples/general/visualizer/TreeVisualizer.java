@@ -87,7 +87,12 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
     private long heldNanos;          // When `held` was last updated
 
     /** Keys held this long without word from the page are let go (e.g. the tab was closed). */
-    private static final long KEY_TIMEOUT_NANOS = 1_000_000_000L;
+    private static final long KEY_TIMEOUT_NANOS = 2_000_000_000L;
+
+    /** How often the page is sent the tree's state, and the scene while playing and while paused. */
+    private static final long STATE_MS = 100;
+    private static final long SCENE_PLAYING_MS = 33;
+    private static final long SCENE_PAUSED_MS = 200;
 
     private static final class KeyHelp {
         final String help;
@@ -377,24 +382,54 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
                 }
                 return new Response(200, "application/json", json.getBytes(StandardCharsets.UTF_8));
             case "/api/scene":
-                String picture = null;
+                String picture;
                 synchronized (lock) {
-                    if (scene != null) {
-                        try {
-                            picture = scene.get();
-                        } catch (RuntimeException e) {
-                            picture = null;
-                        }
-                    }
+                    picture = sceneJson();
                 }
                 return new Response(200, "application/json",
                         (picture == null ? "null" : picture).getBytes(StandardCharsets.UTF_8));
+            case "/api/stream":
+                // The state and the scene, pushed over one connection as they change
+                return new WebServer.Stream(this::stream);
             case "/api/control":
                 if (!request.method.equals("POST")) return Response.text(405, "Use POST");
                 return control(request.query.getOrDefault("action", ""), request.query.getOrDefault("value", ""),
                         request.query);
             default:
                 return Response.text(404, "Not found");
+        }
+    }
+
+    private void stream(OutputStream out) throws IOException, InterruptedException {
+        long nextState = 0;
+        while (true) {
+            String stateJson = null;
+            String sceneJson;
+            boolean isPlaying;
+            long now = System.nanoTime() / 1_000_000L;
+            synchronized (lock) {
+                if (now >= nextState) stateJson = state();
+                sceneJson = sceneJson();
+                isPlaying = playing;
+            }
+            // Written outside the lock, so a slow connection never holds up the tree
+            if (stateJson != null) {
+                WebServer.send(out, "state", stateJson);
+                nextState = now + STATE_MS;
+            }
+            if (sceneJson != null) WebServer.send(out, "scene", sceneJson);
+            Thread.sleep(sceneJson != null && isPlaying ? SCENE_PLAYING_MS
+                    : sceneJson != null ? SCENE_PAUSED_MS : STATE_MS);
+        }
+    }
+
+    /** The scene's JSON, or null if there is no scene (or drawing it failed). */
+    private String sceneJson() {
+        if (scene == null) return null;
+        try {
+            return scene.get();
+        } catch (RuntimeException e) {
+            return null;
         }
     }
 

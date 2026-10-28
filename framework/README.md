@@ -142,6 +142,23 @@ Two behaviors that drive the same motor at the same time will fight over it (the
 
 ---
 
+## Math helpers
+
+[`util.MathUtil`](src/util/MathUtil.java) has the small bits of math every robot needs, so nobody rewrites them inside a node. Use `import static util.MathUtil.*;`:
+
+| Method | Does |
+|--------|------|
+| `clamp(value, min, max)` / `clampPower(value)` | Keeps a value in range; `clampPower` to a motor's -1..1 |
+| `approach(current, target, maxStep)` | Steps toward a target by at most `maxStep`, e.g. to ramp a value each loop |
+| `wrapAngle(radians)` | The same angle between -π and π |
+| `angleError(target, current)` | How far to turn to face `target`, the short way round |
+| `distance(x1, y1, x2, y2)` | Straight-line distance |
+| `toRobotFrame(dx, dy, heading)` / `toFieldFrame(forward, left, heading)` | Turns a direction on the field into one as the robot sees it (forward, left), and back |
+
+Angles are radians, counter-clockwise positive. If you find yourself writing the same formula in two places, add it here (with a test in [`test/util/`](test/util/)).
+
+---
+
 ## Running trees and binding buttons
 
 | Class | Responsibility |

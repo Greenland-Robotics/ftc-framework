@@ -1,5 +1,9 @@
 package hive;
 
+import static util.MathUtil.approach;
+import static util.MathUtil.clamp;
+import static util.MathUtil.distance;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,14 +62,14 @@ final class Hive {
     /** The end to shoot at to make it pivot: the one that is up, or while level the nearer one. */
     int endToShoot(double fromX, double fromY) {
         if (down >= 0) return 1 - down;
-        return Math.hypot(fromX - cupX(TOP), fromY - cupY(TOP)) <= Math.hypot(fromX - cupX(BOTTOM), fromY - cupY(BOTTOM))
+        return distance(fromX, fromY, cupX(TOP), cupY(TOP)) <= distance(fromX, fromY, cupX(BOTTOM), cupY(BOTTOM))
                 ? TOP : BOTTOM;
     }
 
     /** The cup a ball at (bx, by) dropped into, or -1. */
     int cupAt(double bx, double by) {
         for (int end = 0; end < 2; end++) {
-            if (Math.hypot(bx - cupX(end), by - cupY(end)) <= CUP_RADIUS) return end;
+            if (distance(bx, by, cupX(end), cupY(end)) <= CUP_RADIUS) return end;
         }
         return -1;
     }
@@ -95,7 +99,7 @@ final class Hive {
             weight[down] = 0;
         }
         double target = down < 0 ? 0 : down == TOP ? 1 : -1;
-        tilt += Math.max(-dt * 4, Math.min(dt * 4, target - tilt));
+        tilt = approach(tilt, target, dt * 4);
         return spilled;
     }
 
@@ -103,8 +107,8 @@ final class Hive {
     double[] pushOut(double cx, double cy, double radius) {
         double halfX = WIDTH / 2;
         double halfY = LENGTH / 2;
-        double closestX = Math.max(x - halfX, Math.min(x + halfX, cx));
-        double closestY = Math.max(y - halfY, Math.min(y + halfY, cy));
+        double closestX = clamp(cx, x - halfX, x + halfX);
+        double closestY = clamp(cy, y - halfY, y + halfY);
         double dx = cx - closestX;
         double dy = cy - closestY;
         double distance = Math.hypot(dx, dy);

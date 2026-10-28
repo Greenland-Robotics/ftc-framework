@@ -68,7 +68,7 @@ robot ──► pedro ──► framework
 
 | Module | Java package | Example import |
 |--------|--------------|----------------|
-| `framework` | `behavior`, `behavior.*`, `subsystem` | `import static behavior.Behaviors.*;` |
+| `framework` | `behavior`, `behavior.*`, `subsystem`, `util` | `import static behavior.Behaviors.*;` `import static util.MathUtil.*;` |
 | `pedro` | `pedro` | `import pedro.Drive;` |
 | `robot` | `robot`, `robot.control`, `robot.opmode`, `robot.subsystems` | `import robot.control.AutoBase;` |
 

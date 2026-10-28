@@ -1,5 +1,10 @@
 package hive;
 
+import static util.MathUtil.clamp;
+import static util.MathUtil.distance;
+import static util.MathUtil.toFieldFrame;
+import static util.MathUtil.wrapAngle;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -54,10 +59,10 @@ public final class Field {
             double y = 5 + random.nextDouble() * 134;
             Hive red = hives[0];
             if (Math.abs(x - red.x) < Hive.WIDTH / 2 + 6 && Math.abs(y - red.y) < Hive.LENGTH / 2 + 6) continue;
-            if (Math.hypot(x - 16, y - 20) < 16) continue;              // Not on the starting spots
-            if (Math.hypot(x - 16, y - 124) < 16) continue;
+            if (distance(x, y, 16, 20) < 16) continue;                  // Not on the starting spots
+            if (distance(x, y, 16, 124) < 16) continue;
             boolean tooClose = false;
-            for (Ball other : loose) tooClose |= Math.hypot(other.x - x, other.y - y) < 6;
+            for (Ball other : loose) tooClose |= distance(other.x, other.y, x, y) < 6;
             if (tooClose) continue;
             boolean softball = placed < SOFTBALLS / 2;
             loose.add(new Ball(softball, x, y));
@@ -121,9 +126,9 @@ public final class Field {
         Ball best = null;
         double bestCost = Double.MAX_VALUE;
         for (Ball ball : loose) {
-            double cost = Math.hypot(ball.x - robot.x, ball.y - robot.y);
+            double cost = distance(robot.x, robot.y, ball.x, ball.y);
             for (Body other : bodies) {
-                if (other != robot && Math.hypot(ball.x - other.x, ball.y - other.y) < 20) cost += 60;
+                if (other != robot && distance(other.x, other.y, ball.x, ball.y) < 20) cost += 60;
             }
             if (hiveInTheWay(robot.x, robot.y, ball.x, ball.y)) cost += 80;
             if (cost < bestCost) {
@@ -136,7 +141,7 @@ public final class Field {
 
     /** Whether a robot driving straight from one point to another would run into a hive. */
     private boolean hiveInTheWay(double fromX, double fromY, double toX, double toY) {
-        double length = Math.hypot(toX - fromX, toY - fromY);
+        double length = distance(fromX, fromY, toX, toY);
         int samples = (int) Math.ceil(length / 4);
         for (int i = 1; i < samples; i++) {
             double x = fromX + (toX - fromX) * i / samples;
@@ -167,13 +172,11 @@ public final class Field {
     }
 
     private void moveRobot(Body body) {
-        double c = Math.cos(body.heading);
-        double s = Math.sin(body.heading);
         double speed = MAX_SPEED * body.speedScale;
-        double forward = body.forward * speed;
-        double left = body.strafe * speed * 0.85;   // Mecanum wheels strafe a little slower
-        double targetVx = forward * c - left * s;
-        double targetVy = forward * s + left * c;
+        // Mecanum wheels strafe a little slower than they drive
+        double[] target = toFieldFrame(body.forward * speed, body.strafe * speed * 0.85, body.heading);
+        double targetVx = target[0];
+        double targetVy = target[1];
         double targetOmega = body.turn * MAX_TURN * body.speedScale;
 
         // Motors take a moment to speed up and slow down
@@ -183,12 +186,12 @@ public final class Field {
         body.omega += (targetOmega - body.omega) * blend;
         body.x += body.vx * DT;
         body.y += body.vy * DT;
-        body.heading = Drive.wrap(body.heading + body.omega * DT);
+        body.heading = wrapAngle(body.heading + body.omega * DT);
 
         // Walls: keep the whole (turned) square inside the field
         double half = Body.SIZE / 2 * (Math.abs(Math.cos(body.heading)) + Math.abs(Math.sin(body.heading)));
-        body.x = Math.max(half, Math.min(SIZE - half, body.x));
-        body.y = Math.max(half, Math.min(SIZE - half, body.y));
+        body.x = clamp(body.x, half, SIZE - half);
+        body.y = clamp(body.y, half, SIZE - half);
 
         // The hives
         for (Hive hive : hives) {
@@ -214,14 +217,11 @@ public final class Field {
 
     private void runIntake(Body body) {
         if (body.intakePower <= 0) return;
-        double c = Math.cos(body.heading);
-        double s = Math.sin(body.heading);
         for (Iterator<Ball> it = loose.iterator(); it.hasNext() && body.held.size() < Body.CAPACITY; ) {
             Ball ball = it.next();
-            double dx = ball.x - body.x;
-            double dy = ball.y - body.y;
-            double ahead = dx * c + dy * s;
-            double left = -dx * s + dy * c;
+            double[] seen = body.toRobot(ball.x, ball.y);
+            double ahead = seen[0];
+            double left = seen[1];
             // The rollers reach a few inches past the front bumper, across most of its width
             if (ahead > Body.SIZE / 2 - 2 && ahead < Body.SIZE / 2 + ball.radius() + 3 && Math.abs(left) < 7) {
                 it.remove();
@@ -233,7 +233,7 @@ public final class Field {
     private void runShooter(Body body) {
         double rate = body.flywheelPower > body.flywheelSpeed ? 2.5 : 0.8;   // Spins up faster than it coasts down
         double change = (body.flywheelPower - body.flywheelSpeed) * Math.min(1, rate * DT * 4);
-        body.flywheelSpeed = Math.max(0, Math.min(1, body.flywheelSpeed + change));
+        body.flywheelSpeed = clamp(body.flywheelSpeed + change, 0, 1);
 
         if (!body.launch) return;
         body.launch = false;
@@ -261,11 +261,11 @@ public final class Field {
             ball.y += ball.vy * DT;
             double r = ball.radius();
             if (ball.x < r || ball.x > SIZE - r) {
-                ball.x = Math.max(r, Math.min(SIZE - r, ball.x));
+                ball.x = clamp(ball.x, r, SIZE - r);
                 ball.vx *= -0.5;
             }
             if (ball.y < r || ball.y > SIZE - r) {
-                ball.y = Math.max(r, Math.min(SIZE - r, ball.y));
+                ball.y = clamp(ball.y, r, SIZE - r);
                 ball.vy *= -0.5;
             }
             for (Hive hive : hives) {
@@ -311,12 +311,9 @@ public final class Field {
 
     /** A robot shoves a ball it drives into. */
     private static void pushBall(Body body, Ball ball) {
-        double c = Math.cos(body.heading);
-        double s = Math.sin(body.heading);
-        double dx = ball.x - body.x;
-        double dy = ball.y - body.y;
-        double ahead = dx * c + dy * s;
-        double left = -dx * s + dy * c;
+        double[] seen = body.toRobot(ball.x, ball.y);
+        double ahead = seen[0];
+        double left = seen[1];
         double reach = Body.SIZE / 2 + ball.radius();
         if (Math.abs(ahead) >= reach || Math.abs(left) >= reach) return;
         // Out through the nearest side, moving with the robot
@@ -325,8 +322,9 @@ public final class Field {
         } else {
             left = Math.copySign(reach, left);
         }
-        ball.x = body.x + ahead * c - left * s;
-        ball.y = body.y + ahead * s + left * c;
+        double[] outside = body.toField(ahead, left);
+        ball.x = outside[0];
+        ball.y = outside[1];
         ball.vx = body.vx * 1.2 + (ball.x - body.x) * 0.5;
         ball.vy = body.vy * 1.2 + (ball.y - body.y) * 0.5;
     }
@@ -357,8 +355,8 @@ public final class Field {
         double length = Math.max(1e-6, Math.hypot(dx, dy));
         ball.vx = dx / length * 25;
         ball.vy = dy / length * 25;
-        ball.x = Math.max(ball.radius(), Math.min(SIZE - ball.radius(), ball.x));
-        ball.y = Math.max(ball.radius(), Math.min(SIZE - ball.radius(), ball.y));
+        ball.x = clamp(ball.x, ball.radius(), SIZE - ball.radius());
+        ball.y = clamp(ball.y, ball.radius(), SIZE - ball.radius());
         loose.add(ball);
     }
 
