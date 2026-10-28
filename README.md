@@ -44,7 +44,7 @@ Each folder's README explains what's inside and documents its classes.
 | Tune Pedro Pathing | [`pedro/README.md`](pedro/README.md#tuning-a-new-robot) |
 | Look up a node (`sequence`, `selector`, `retry`, ...) | [`framework/README.md`](framework/README.md#node-reference) |
 | Learn how behavior trees work, without a robot | Run the [behavior tree visualizer](examples/README.md#running-the-behavior-tree-visualizer) |
-| Practice the TeleOp and watch its tree, without a robot | Run the [hive game](examples/README.md#the-hive-game) |
+| Practice the TeleOp and watch its tree, without a robot | Run the [hive game](docs/setup.md#try-it-without-a-robot-the-hive-game) |
 | Add a library | `build.dependencies.gradle` |
 
 ## Quick start
@@ -52,6 +52,8 @@ Each folder's README explains what's inside and documents its classes.
 2. Set your drive motor names and odometry in [`Constants.java`](pedro/src/pedro/Constants.java), deploy, and run the **Tuning** OpMode.
 3. Add a subsystem for each mechanism and register it in [`Robot.java`](robot/src/robot/Robot.java). [`examples/ftc/Intake.java`](examples/ftc/Intake.java) shows how.
 4. Copy `BoilerplateAuto.java` / `BoilerplateTeleOp.java` from [`examples/ftc/`](examples/ftc/) into `robot/src/robot/opmode/` and build your behavior trees. See the [robot guide](robot/README.md).
+
+**No robot yet?** Right after cloning, run the hive game simulator: drive a simulated robot through this season's game with the keyboard and watch its behavior tree react live. In a terminal, run `./gradlew :examples:hive` and open http://localhost:8765, or see [how to run it from VS Code or Android Studio](docs/setup.md#try-it-without-a-robot-the-hive-game).
 
 ## How the modules fit together
 
