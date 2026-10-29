@@ -15,11 +15,16 @@ final class Ball {
     double toY;
     double flight;       // 0 when shot, 1 when it lands
     double flightTime;   // seconds
+    Alliance shotBy;
 
     Ball(boolean softball, double x, double y) {
         this.softball = softball;
         this.x = x;
         this.y = y;
+    }
+
+    String kind() {
+        return softball ? "softball" : "wiffle ball";
     }
 
     double radius() {

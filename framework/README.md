@@ -157,6 +157,17 @@ Two behaviors that drive the same motor at the same time will fight over it (the
 
 Angles are radians, counter-clockwise positive. If you find yourself writing the same formula in two places, add it here (with a test in [`test/util/`](test/util/)).
 
+## Logging
+
+[`util.Log`](src/util/Log.java) writes leveled messages (`DEBUG`, `INFO`, `WARN`, `ERROR`), by default to standard out:
+
+```java
+Log.debug("Intake", "picked up ball %d, %d held", id, count);   // DEBUG [Intake] picked up ball 4, 2 held
+Log.info("Auto", "parked");
+```
+
+Only messages at or above the level are printed, and only those are formatted, so leaving debug calls in costs almost nothing. The level comes from `-Dlog.level=debug` (default `INFO`), or set it in code with `Log.setLevel(Log.Level.DEBUG)`. To send messages somewhere else (the FTC SDK's `RobotLog`, telemetry), pass a `Log.Sink` to `Log.setSink`.
+
 ---
 
 ## Running trees and binding buttons

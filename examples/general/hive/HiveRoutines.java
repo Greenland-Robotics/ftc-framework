@@ -17,6 +17,7 @@ import java.util.Map;
 
 import behavior.Node;
 import behavior.decorator.Timeout;
+import util.Log;
 
 /**
  * The robot's behavior tree for the hive game. The Auto runs all of it by itself; the TeleOp
@@ -159,7 +160,8 @@ public final class HiveRoutines {
     /**
      * Where to shoot from: {@link Field#SHOT_RANGE} from the cup at the up end of our hive
      * (measured from the robot's front), facing it. Of all such spots, the closest one to the
-     * robot that is on the field and clear of the hives. Null if there is none.
+     * robot that is on the field, clear of the hives and not where another robot is (two robots
+     * pushing toward each other's spot would never get there). Null if there is none.
      */
     static Pose shootingSpot(Robot robot, Field field) {
         Hive hive = field.hive(robot.alliance);
@@ -175,7 +177,9 @@ public final class HiveRoutines {
                 double angle = toRobot + sign * step * Math.toRadians(5);
                 double x = cupX + Math.cos(angle) * distance;
                 double y = cupY + Math.sin(angle) * distance;
-                if (field.isClear(x, y, 12)) return new Pose(x, y, wrapAngle(angle + Math.PI));
+                if (field.isClear(x, y, 12) && !field.robotNear(robot.body, x, y, 26)) {
+                    return new Pose(x, y, wrapAngle(angle + Math.PI));
+                }
             }
         }
         return null;
@@ -183,14 +187,16 @@ public final class HiveRoutines {
 
     /**
      * The spot a robot is lining up a shot from. It stays put while the robot drives there (worked
-     * out again from scratch each time it starts lining up, or if the target end changes), so the
-     * robot isn't chasing a spot that moves with it.
+     * out again from scratch each time it starts lining up, or if the hive pivots), so the robot
+     * isn't chasing a spot that moves with it. It does move if another robot gets onto it. While the hive is level either end will do, so it
+     * keeps the end it picked: going by whichever is nearer, a robot level with the pivot would
+     * swap ends, and spots, every time it moved.
      */
     private static final class ShotChoice {
         private final Robot robot;
         private final Field field;
         private Pose spot;
-        private int end = -1;
+        private int down;
         private double lastAsked = -1;
 
         ShotChoice(Robot robot, Field field) {
@@ -200,13 +206,19 @@ public final class HiveRoutines {
 
         Pose spot() {
             Hive hive = field.hive(robot.alliance);
-            Pose here = robot.drive.pose();
-            int target = hive.endToShoot(here.x, here.y);
             boolean startingOver = field.time() - lastAsked > 0.1;   // Not asked last loop: a new line-up
             lastAsked = field.time();
-            if (spot == null || startingOver || target != end) {
+            boolean taken = spot != null && field.robotNear(robot.body, spot.x, spot.y, 24);   // Another robot is on it
+            if (spot == null || startingOver || hive.down != down || taken) {
+                String why = startingOver || spot == null ? "lining up" : taken ? "spot taken, moving" : "hive pivoted, moving";
+                Pose before = spot;
                 spot = shootingSpot(robot, field);
-                end = target;
+                down = hive.down;
+                if (spot == null) {
+                    Log.debug(robot.alliance.toString(), "%s: no clear spot to shoot from", why);
+                } else if (before == null || before.distanceTo(spot.x, spot.y) > 2) {
+                    Log.debug(robot.alliance.toString(), "%s to %s", why, spot);
+                }
             }
             return spot;
         }
@@ -231,12 +243,15 @@ public final class HiveRoutines {
         }
 
         void giveUp() {
-            if (current != null) skipUntil.put(current, field.time() + SKIP_SECONDS);
+            if (current == null) return;
+            skipUntil.put(current, field.time() + SKIP_SECONDS);
+            Log.debug(robot.alliance.toString(), "couldn't get the %s at (%.0f, %.0f), skipping it for %.0f s",
+                    current.kind(), current.x, current.y, SKIP_SECONDS);
         }
 
         private boolean allowed(Ball ball) {
             Double until = skipUntil.get(ball);
-            return until == null || field.time() >= until;
+            return (until == null || field.time() >= until) && pickUpPose(robot.drive.pose(), ball, field) != null;
         }
 
         /** Where to drive to pick up the nearest ball we haven't given up on, or null if there is none. */
@@ -249,7 +264,8 @@ public final class HiveRoutines {
     /**
      * A pose that puts the ball in the rollers. Straight at it from where the robot is, unless the
      * ball is against a wall or a hive: then square on, facing the wall, so the robot's corners
-     * don't keep it out of reach.
+     * don't keep it out of reach. Null if the robot can't get it from any side, e.g. a ball
+     * wedged in a corner.
      */
     static Pose pickUpPose(Pose here, Ball ball, Field field) {
         double reach = Body.SIZE / 2;   // The robot's center this far from the ball puts the ball in the rollers
@@ -269,6 +285,6 @@ public final class HiveRoutines {
                 best = new Pose(x, y, wrapAngle(heading));
             }
         }
-        return best != null ? best : new Pose(ball.x - Math.cos(direct) * reach, ball.y - Math.sin(direct) * reach, direct);
+        return best;
     }
 }

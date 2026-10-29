@@ -15,9 +15,9 @@
     },
     {
       "type": "java",
-      "name": "Hive game TeleOp",
+      "name": "Hive game",
       "request": "launch",
-      "mainClass": "hive.HiveTeleOp",
+      "mainClass": "hive.HiveMatch",
       "projectName": "${workspaceFolderBasename}",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"

@@ -54,7 +54,7 @@ The container can't see USB devices, so deploy over Wi-Fi:
 2. It may take a few minutes to sync and build. You are ready when the left-hand panel shows `robot`, `framework`, `pedro`, `FtcRobotController` and `Gradle Scripts`.
 3. Plug in or connect to your Control Hub and press the green **Run** button to deploy.
 
-To see how behavior trees run without a robot, pick the **Behavior tree visualizer** run configuration instead (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)), or **Hive game TeleOp** to [drive a simulated robot](#try-it-without-a-robot-the-hive-game).
+To see how behavior trees run without a robot, pick the **Behavior tree visualizer** run configuration instead (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)), or **Hive game** to [drive a simulated robot](#try-it-without-a-robot-the-hive-game).
 
 ---
 
@@ -78,8 +78,8 @@ A simulator of this season's game runs on your computer. You drive the red robot
 
 | Where | How |
 |-------|-----|
-| VS Code (A or C) | **Run and Debug** (▷ in the sidebar) → **Hive game TeleOp**, or **Terminal** → **Run Task…** → **Run hive game TeleOp** |
-| Android Studio (B) | Pick **Hive game TeleOp** in the run configuration dropdown next to ▶ and press Run |
+| VS Code (A or C) | **Run and Debug** (▷ in the sidebar) → **Hive game**, or **Terminal** → **Run Task…** → **Run hive game** |
+| Android Studio (B) | Pick **Hive game** in the run configuration dropdown next to ▶ and press Run |
 | Terminal | `./gradlew :examples:hive` |
 
 **2. Open http://localhost:8765** (it opens by itself when not in a container), click the page, and press **Play**.
@@ -115,7 +115,7 @@ All under **Terminal** → **Run Task…**, in or out of the container:
 | **Deploy to robot** | Installs the app on the connected Control Hub/phone and starts it |
 | **Test framework** | Runs the behavior tree unit tests (no robot needed) |
 | **Run behavior tree visualizer** | Runs the behavior tree example on this computer with a live view at http://localhost:8765 (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)) |
-| **Run hive game TeleOp** | Drive a simulated robot through this season's game with the keyboard at http://localhost:8765 (see [above](#try-it-without-a-robot-the-hive-game)) |
+| **Run hive game** | Drive a simulated robot through this season's game with the keyboard at http://localhost:8765 (see [above](#try-it-without-a-robot-the-hive-game)) |
 | **Refresh VS Code classpath** | Updates VS Code's view of the libraries |
 | **Clean** | Deletes build outputs |
 

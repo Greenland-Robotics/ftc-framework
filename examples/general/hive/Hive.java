@@ -59,9 +59,14 @@ final class Hive {
         return Math.max(0, TIP_UNITS - (weight[end] - weight[1 - end]));
     }
 
-    /** The end to shoot at to make it pivot: the one that is up, or while level the nearer one. */
+    /**
+     * The end to shoot at to make it pivot: the one that is up. While level, the one closer to
+     * tipping (the nearer one if they are even), so balls aren't split between the ends: shared
+     * out, the field can run dry with neither end 20 ahead, and then nothing ever pivots again.
+     */
     int endToShoot(double fromX, double fromY) {
         if (down >= 0) return 1 - down;
+        if (weight[TOP] != weight[BOTTOM]) return weight[TOP] > weight[BOTTOM] ? TOP : BOTTOM;
         return distance(fromX, fromY, cupX(TOP), cupY(TOP)) <= distance(fromX, fromY, cupX(BOTTOM), cupY(BOTTOM))
                 ? TOP : BOTTOM;
     }

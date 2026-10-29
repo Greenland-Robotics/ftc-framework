@@ -55,7 +55,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Run hive game TeleOp",
+      "label": "Run hive game",
       "detail": "Drive a simulated robot through the hive game with the keyboard at http://localhost:8765",
       "type": "shell",
       "command": "./gradlew",

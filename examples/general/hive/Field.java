@@ -12,6 +12,7 @@ import java.util.Random;
 import java.util.function.Predicate;
 
 import behavior.runtime.Clock;
+import util.Log;
 
 /**
  * The simulated game: a 144 × 144 inch field with wiffle balls and wiffle softballs, a
@@ -134,6 +135,14 @@ public final class Field {
         return true;
     }
 
+    /** Whether a robot other than {@code robot} is within {@code range} of (x, y). */
+    boolean robotNear(Body robot, double x, double y, double range) {
+        for (Body other : bodies) {
+            if (other != robot && distance(other.x, other.y, x, y) < range) return true;
+        }
+        return false;
+    }
+
     public int ballsLeft() {
         return loose.size();
     }
@@ -175,11 +184,43 @@ public final class Field {
     }
 
     /**
-     * A simple way around the hives, for {@link Drive#driveTo}: if a hive is in the way, first
-     * drive along its side to just past its nearer end, then cross over. Returns {@code goal}
-     * itself when the way is clear.
+     * A simple way around the hives and the other robots, for {@link Drive#driveTo}: if a hive is
+     * in the way, first drive along its side to just past its nearer end, then cross over; if a
+     * robot is in the way, pass it on the right (so two robots meeting head on both step aside,
+     * instead of pushing against each other). Returns {@code goal} itself when the way is clear.
      */
     Pose route(Pose here, Pose goal) {
+        Pose next = aroundHives(here, goal);
+        Pose aside = aroundRobots(here, next);
+        return aside != null ? aside : next;
+    }
+
+    private Pose aroundRobots(Pose here, Pose next) {
+        double dx = next.x - here.x;
+        double dy = next.y - here.y;
+        double length = Math.hypot(dx, dy);
+        if (length < 1) return null;
+        double ux = dx / length;
+        double uy = dy / length;
+        for (Body other : bodies) {
+            // Our own body is the one at here
+            double ox = other.x - here.x;
+            double oy = other.y - here.y;
+            if (Math.hypot(ox, oy) < 1) continue;
+            double along = ox * ux + oy * uy;            // How far ahead it is
+            double across = -ox * uy + oy * ux;          // How far to the left of our path
+            if (along <= 0 || along > length + ROBOT_RADIUS || Math.abs(across) >= 2 * ROBOT_RADIUS + 2) continue;
+            double offset = 2 * ROBOT_RADIUS + 6;
+            for (int side = -1; side <= 1; side += 2) {   // Right first, then left
+                double x = other.x - uy * offset * side;
+                double y = other.y + ux * offset * side;
+                if (canStand(x, y, here.heading)) return new Pose(x, y, next.heading);
+            }
+        }
+        return null;
+    }
+
+    private Pose aroundHives(Pose here, Pose goal) {
         Hive hive = hiveInTheWay(here.x, here.y, goal.x, goal.y);
         if (hive == null) return goal;
         double clearance = ROBOT_RADIUS + 4;
@@ -204,6 +245,10 @@ public final class Field {
     /** Moves the game forward one loop. */
     public void step() {
         steps++;
+        if (withAuto && steps == Math.round(AUTO_SECONDS / DT)) Log.info("match", "Autonomous over, TeleOp starts");
+        if (steps == Math.round(matchSeconds() / DT)) {
+            Log.info("match", "Match over: red %d, blue %d", score(Alliance.RED), score(Alliance.BLUE));
+        }
         for (Body body : bodies) moveRobot(body);
         for (int i = 0; i < bodies.size(); i++) {
             for (int j = i + 1; j < bodies.size(); j++) separate(bodies.get(i), bodies.get(j));
@@ -272,6 +317,7 @@ public final class Field {
             if (ahead > Body.SIZE / 2 - 2 && ahead < Body.SIZE / 2 + ball.radius() + 3 && Math.abs(left) < 7) {
                 it.remove();
                 body.held.add(ball);
+                Log.debug(body.alliance.toString(), "picked up a %s (%d of %d held)", ball.kind(), body.held.size(), Body.CAPACITY);
             }
         }
     }
@@ -295,7 +341,10 @@ public final class Field {
         ball.toY = front[1] + Math.sin(direction) * range;
         ball.flight = 0;
         ball.flightTime = 0.35 + range / 60;
+        ball.shotBy = body.alliance;
         flying.add(ball);
+        Log.debug(body.alliance.toString(), "shot a %s from (%.0f, %.0f) at %.0f%% flywheel", ball.kind(), body.x, body.y,
+                body.flywheelSpeed * 100);
     }
 
     private void moveBalls() {
@@ -392,9 +441,12 @@ public final class Field {
             int end = hive.cupAt(ball.x, ball.y);
             if (end >= 0) {
                 hive.add(ball, end);
+                Log.debug(ball.shotBy.toString(), "%s landed in %s's %s cup, now %d : %d (top : bottom)", ball.kind(),
+                        hive.alliance, end == Hive.TOP ? "top" : "bottom", hive.weight[Hive.TOP], hive.weight[Hive.BOTTOM]);
                 return;
             }
         }
+        Log.debug(ball.shotBy.toString(), "%s missed, landed at (%.0f, %.0f)", ball.kind(), ball.x, ball.y);
         // Missed: it bounces on and rolls on in the direction it was flying
         double dx = ball.toX - ball.fromX;
         double dy = ball.toY - ball.fromY;
@@ -411,9 +463,8 @@ public final class Field {
             List<Ball> spilled = hive.settle(DT);
             if (spilled.isEmpty()) continue;   // Didn't pivot: a pivot always tips out the 20+ units that pulled it down
             // Shows up in the visualizer's Printed panel
-            System.out.println(hive.alliance + "'s hive pivoted to its " + (hive.down == Hive.TOP ? "top" : "bottom")
-                    + " end: +" + Hive.PIVOT_POINTS + " for " + hive.alliance + ", and " + spilled.size()
-                    + " balls fall out");
+            Log.info(hive.alliance.toString(), "hive pivoted to its %s end: +%d, and %d balls fall out (score %d)",
+                    hive.down == Hive.TOP ? "top" : "bottom", Hive.PIVOT_POINTS, spilled.size(), score(hive.alliance));
             // They tumble out of the cup onto the floor around that end of the hive
             double cupY = hive.cupY(hive.down);
             double outward = hive.down == Hive.TOP ? 1 : -1;

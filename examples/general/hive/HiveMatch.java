@@ -8,22 +8,28 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import behavior.Node;
 import behavior.runtime.BehaviorRunner;
+import util.Log;
 import visualizer.TreeVisualizer;
 
 /**
- * Drive a simulated robot through this season's hive game with the keyboard, and watch its
- * behavior tree react: which lanes are running, which conditions pass, which actions are active.
+ * Plays a match of this season's hive game in the simulator, with the red robot's behavior tree
+ * shown live: which lanes are running, which conditions pass, which actions are active.
  *
- * You drive the red robot; the blue robot is driven by the Auto routine, the same tree the red
- * robot's TeleOp borrows its pieces from (see {@link HiveRoutines}).
+ * A match is the TeleOp period, or (picked in the page) the Auto period followed by TeleOp. In
+ * TeleOp you drive the red robot with the keyboard; in Auto its tree drives it. The blue robot
+ * runs the Auto routine all match long, the same tree the TeleOp borrows its pieces from (see
+ * {@link HiveRoutines}).
  *
  * Run it (see examples/README.md for more ways):
- *     VS Code:         Run and Debug → "Hive game TeleOp"
- *     Android Studio:  the "Hive game TeleOp" run configuration
+ *     VS Code:         Run and Debug → "Hive game"
+ *     Android Studio:  the "Hive game" run configuration
  *     Terminal:        ./gradlew :examples:hive
  * then open http://localhost:8765 and press Play.
+ *
+ * What happens (pickups, shots, where they land, pivots, the AI's choices) is logged to the
+ * console at debug level, each line starting with the match time. Quieter: -Dlog.level=info.
  */
-public final class HiveTeleOp {
+public final class HiveMatch {
     private static final String TELEOP_ONLY = "TeleOp only (2:00)";
     private static final String FULL_MATCH = "Auto (0:30), then TeleOp";
     private static final String BLUE_AI = "Blue robot: runs the Auto";
@@ -38,13 +44,17 @@ public final class HiveTeleOp {
     private static Robot red;
     private static BehaviorRunner blueRunner;
 
-    private HiveTeleOp() {}
+    private HiveMatch() {}
 
     public static void main(String[] args) throws Exception {
-        visualizer = new TreeVisualizer(HiveTeleOp::newMatch);
+        // Debug unless -Dlog.level says otherwise, with the match time on each line
+        if (System.getProperty("log.level") == null) Log.setLevel(Log.Level.DEBUG);
+        Log.setSink((level, tag, message) -> System.out.println(String.format(Locale.ROOT, "%6.2f s %-5s [%s] %s",
+                field == null ? 0 : field.time(), level, tag, message)));
+        visualizer = new TreeVisualizer(HiveMatch::newMatch);
         keyboard = new KeyboardDriver(visualizer::isHeld);
         visualizer
-                .afterEachTick(HiveTeleOp::simulate)
+                .afterEachTick(HiveMatch::simulate)
                 .scene(() -> FieldDrawing.draw(field, red == null ? null : red.body))
                 .key("Drive forward / back", "ArrowUp", "ArrowDown")
                 .key("Turn left / right", "ArrowLeft", "ArrowRight")
@@ -71,7 +81,7 @@ public final class HiveTeleOp {
         // A new ball layout every match, unless -Dhive.seed=N asks to replay one
         long seed = Long.getLong("hive.seed", ThreadLocalRandom.current().nextInt(1_000_000));
         field = new Field(fullMatch, seed);
-        System.out.println("New match, ball layout seed " + seed + " (replay it with -Dhive.seed=" + seed + ")");
+        Log.info("match", "New match, ball layout seed %d (replay it with -Dhive.seed=%d)", seed, seed);
         red = field.addRobot(Alliance.RED, 16, 20, Math.PI / 2, 1);
         blueRunner = null;
         if (blueAi) {

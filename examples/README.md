@@ -68,8 +68,8 @@ For a simulated robot, the visualizer can also draw a picture next to the tree a
 
 | Where | How |
 |-------|-----|
-| VS Code | **Run and Debug** → **Hive game TeleOp**, or **Run Task…** → **Run hive game TeleOp** |
-| Android Studio | The **Hive game TeleOp** run configuration |
+| VS Code | **Run and Debug** → **Hive game**, or **Run Task…** → **Run hive game** |
+| Android Studio | The **Hive game** run configuration |
 | Terminal | `./gradlew :examples:hive` |
 
 Open **http://localhost:8765** and press **Play**. You drive the red robot:
@@ -87,6 +87,8 @@ Open **http://localhost:8765** and press **Play**. You drive the red robot:
 **The game.** Each alliance has its own hive: a seesaw with a cup at each end. Balls that land in a cup weigh down that end (a wiffle ball is 1 unit, a wiffle softball 3). When one end outweighs the other by 20 units, the seesaw pivots to it: **+20 points** for that alliance, and the cup that went down tips its balls back out onto the floor. So you score by filling whichever end of your hive is up, again and again. The dotted line in front of your robot shows where a shot would land; it turns green when it would land in the up end's cup.
 
 The blue robot plays by itself: it runs the Auto. Use the drop-downs to take it off the field, or to play a full match (30 s Auto, then the 2:00 TeleOp). The speed menu slows the whole game down.
+
+The console logs what happens at debug level, each line starting with the match time: pickups, shots and where they land, pivots, and the robots' choices (where they line up, balls they give up on). For just the pivots and match events, add `-Dlog.level=info`.
 
 Every match (and every **Restart**) scatters the balls differently, mirrored so both halves match. The page shows the layout's seed under **Ball layout seed**, and so does the console. To replay a layout, say one where the Auto got stuck, pass its seed: `./gradlew :examples:hive -Dhive.seed=176423`.
 
