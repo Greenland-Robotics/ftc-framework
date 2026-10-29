@@ -48,12 +48,16 @@ public final class Field {
             new Hive(Alliance.RED, HIVE_INSET, SIZE / 2),
             new Hive(Alliance.BLUE, SIZE - HIVE_INSET, SIZE / 2)
     };
+    final long seed;
     private long steps;
-    private final Random random = new Random(2026);
+    private final Random random;
 
-    public Field(boolean withAuto) {
+    /** A field with balls scattered by {@code seed}: the same seed gives the same layout and shots. */
+    public Field(boolean withAuto, long seed) {
         this.withAuto = withAuto;
-        // The same layout on both halves, mirrored, so neither alliance has an advantage
+        this.seed = seed;
+        random = new Random(seed);
+        // A random layout, mirrored onto the other half, so neither alliance has an advantage
         int placed = 0;
         while (placed < (WIFFLE_BALLS + SOFTBALLS) / 2) {
             double x = 5 + random.nextDouble() * 64;

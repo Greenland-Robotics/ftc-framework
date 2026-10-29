@@ -40,8 +40,9 @@ tasks.register('hive', JavaExec) {
 }
 
 tasks.withType(JavaExec).configureEach {
-    // Pass -Dvisualizer.port=8766 (another port) or -Dvisualizer.browser=false through to the program
-    systemProperties System.properties.findAll { it.key.toString().startsWith('visualizer.') }
+    // Pass -Dvisualizer.port=8766 (another port), -Dvisualizer.browser=false or -Dhive.seed=1234
+    // (replay a ball layout) through to the program
+    systemProperties System.properties.findAll { it.key.toString() =~ /^(visualizer|hive)\./ }
     // The visualizer swaps each node's children for traced copies, which newer JDKs warn about
     if (JavaVersion.current() >= JavaVersion.toVersion(26)) {
         jvmArgs '--enable-final-field-mutation=ALL-UNNAMED'

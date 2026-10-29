@@ -88,6 +88,8 @@ Open **http://localhost:8765** and press **Play**. You drive the red robot:
 
 The blue robot plays by itself: it runs the Auto. Use the drop-downs to take it off the field, or to play a full match (30 s Auto, then the 2:00 TeleOp). The speed menu slows the whole game down.
 
+Every match (and every **Restart**) scatters the balls differently, mirrored so both halves match. The page shows the layout's seed under **Ball layout seed**, and so does the console. To replay a layout, say one where the Auto got stuck, pass its seed: `./gradlew :examples:hive -Dhive.seed=176423`.
+
 **One tree for Auto and TeleOp.** [`HiveRoutines.java`](general/hive/HiveRoutines.java) builds both from the same pieces: `shootOne` (spin up the flywheel, then feed a ball), `lineUpShot` and `collectBall`. The Auto chains them together by itself; the TeleOp runs three lanes in parallel (wheels, intake, shooter), each waiting on a driver button before starting one of those pieces. Fold the lanes up with **Collapse** to see at a glance what each one is doing.
 
 The routines only talk to the subsystems (`Drive`, `Intake`, `Shooter`) and a `Driver`, never to the simulation. To run them on the robot, give them subsystems that own real hardware, with the same methods, and a `Driver` that reads the gamepad.

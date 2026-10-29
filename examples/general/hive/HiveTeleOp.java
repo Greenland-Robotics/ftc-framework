@@ -4,6 +4,7 @@ import static behavior.Behaviors.race;
 import static behavior.Behaviors.waitUntil;
 
 import java.util.Locale;
+import java.util.concurrent.ThreadLocalRandom;
 
 import behavior.Node;
 import behavior.runtime.BehaviorRunner;
@@ -60,13 +61,17 @@ public final class HiveTeleOp {
                 .watch("Red hive (top : bottom units)", () -> hiveText(field.hive(Alliance.RED)))
                 .watch("Blue hive (top : bottom units)", () -> hiveText(field.hive(Alliance.BLUE)))
                 .watch("Score (red : blue)", () -> field.score(Alliance.RED) + " : " + field.score(Alliance.BLUE))
+                .watch("Ball layout seed", () -> field.seed)
                 .watch("Match time", () -> String.format(Locale.ROOT, "%.1f s", field.time()))
                 .start();
     }
 
     /** A new field and robots; Restart (or changing a setting) calls this again. */
     static Node newMatch() {
-        field = new Field(fullMatch);
+        // A new ball layout every match, unless -Dhive.seed=N asks to replay one
+        long seed = Long.getLong("hive.seed", ThreadLocalRandom.current().nextInt(1_000_000));
+        field = new Field(fullMatch, seed);
+        System.out.println("New match, ball layout seed " + seed + " (replay it with -Dhive.seed=" + seed + ")");
         red = field.addRobot(Alliance.RED, 16, 20, Math.PI / 2, 1);
         blueRunner = null;
         if (blueAi) {
