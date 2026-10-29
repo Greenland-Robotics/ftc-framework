@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 
+import behavior.decorator.Named;
 import behavior.decorator.Timeout;
 import behavior.leaf.Delay;
 
@@ -85,5 +86,17 @@ class DecoratorTest {
         safe.set(false);
         assertEquals(FAILURE, guarded.tick());
         assertEquals(1, work.halts);
+    }
+
+    @Test
+    void namedPassesTicksAndHaltsThrough() {
+        ScriptedNode work = ScriptedNode.returning(RUNNING, SUCCESS);
+        Node named = work.named("work");
+
+        assertEquals("work", ((Named) named).name());
+        assertEquals(RUNNING, named.tick());
+        named.halt();
+        assertEquals(1, work.halts);
+        assertEquals(SUCCESS, named.tick());
     }
 }

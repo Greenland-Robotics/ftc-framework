@@ -12,6 +12,15 @@
       "projectName": "${workspaceFolderBasename}",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
+    },
+    {
+      "type": "java",
+      "name": "Hive game",
+      "request": "launch",
+      "mainClass": "hive.HiveMatch",
+      "projectName": "${workspaceFolderBasename}",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
     }
   ]
 }

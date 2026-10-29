@@ -5,6 +5,7 @@ import java.util.function.BooleanSupplier;
 import behavior.decorator.AlwaysSucceed;
 import behavior.decorator.Guard;
 import behavior.decorator.Invert;
+import behavior.decorator.Named;
 import behavior.decorator.Repeat;
 import behavior.decorator.Retry;
 import behavior.decorator.Timeout;
@@ -60,5 +61,10 @@ public interface Node {
     /** Runs only while {@code condition} holds; halts and fails as soon as it doesn't. */
     default Node onlyWhile(BooleanSupplier condition) {
         return new Guard(condition, this);
+    }
+
+    /** Names this node, e.g. "Shoot button held?", for telemetry and the visualizer. Runs it unchanged. */
+    default Node named(String name) {
+        return new Named(this, name);
     }
 }

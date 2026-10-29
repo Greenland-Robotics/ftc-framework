@@ -22,6 +22,7 @@ import behavior.decorator.AlwaysSucceed;
 import behavior.decorator.Decorator;
 import behavior.decorator.Guard;
 import behavior.decorator.Invert;
+import behavior.decorator.Named;
 import behavior.decorator.Repeat;
 import behavior.decorator.Retry;
 import behavior.decorator.Timeout;
@@ -43,6 +44,7 @@ final class BehaviorTree {
         final int id;
         final Node node;
         final String label;   // How the parent refers to it: "1", "then", "else", ...
+        String name;          // From .named("..."), or null
         final List<Info> children = new ArrayList<>();
 
         String state = "idle";   // idle, running, success, failure or halted
@@ -153,6 +155,15 @@ final class BehaviorTree {
     private Traced trace(Node node, String label) {
         if (node instanceof Traced) {
             return (Traced) node;
+        }
+        if (node instanceof Named) {
+            // Only a label: trace the node inside and put it in the Named's place, under its name
+            Object inner = read(node, "child");
+            if (inner instanceof Node) {
+                Traced child = trace((Node) inner, label);
+                if (child.info.name == null) child.info.name = ((Named) node).name();
+                return child;
+            }
         }
         Traced existing = traced.get(node);
         if (existing != null) {

@@ -14,10 +14,13 @@ import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import behavior.Node;
@@ -40,6 +43,10 @@ import visualizer.WebServer.Response;
  * It plays the role of the OpMode: it calls {@code runner.tick()} every loop, but only while you
  * press Play or Step. The routine supplier is called again on Restart, so it should also reset
  * any state.
+ *
+ * <p>For a simulated robot it can also draw a {@link #scene scene} (like the field), pass
+ * {@link #key keys} held in the page to the program (to drive with the keyboard), and offer
+ * {@link #setting settings} that restart the routine.
  */
 public final class TreeVisualizer implements BehaviorTree.Listener {
     public static final int DEFAULT_PORT = 8765;
@@ -50,7 +57,10 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
     private final Supplier<Node> routine;
     private final Map<String, Supplier<?>> watches = new LinkedHashMap<>();
     private final List<Runnable> afterTicks = new ArrayList<>();
-    private int port = DEFAULT_PORT;
+    private final List<KeyHelp> keys = new ArrayList<>();
+    private final Map<String, Setting> settings = new LinkedHashMap<>();
+    private Supplier<String> scene;
+    private int port = Integer.getInteger("visualizer.port", DEFAULT_PORT);   // -Dvisualizer.port=8766
 
     // Everything below is guarded by `lock`: the loop thread runs the tree, web requests read and control it
     private final Object lock = new Object();
@@ -72,6 +82,39 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
     private int periodMs = 20;
     private final Deque<Info> calling = new ArrayDeque<>();
     private final List<LogLine> log = new ArrayList<>();
+    private final Set<String> held = new HashSet<>();
+    private long heldStamp;          // The page's timestamp for `held`, to ignore updates that arrive late
+    private long heldNanos;          // When `held` was last updated
+
+    /** Keys held this long without word from the page are let go (e.g. the tab was closed). */
+    private static final long KEY_TIMEOUT_NANOS = 2_000_000_000L;
+
+    /** How often the page is sent the tree's state, and the scene while playing and while paused. */
+    private static final long STATE_MS = 100;
+    private static final long SCENE_PLAYING_MS = 33;
+    private static final long SCENE_PAUSED_MS = 200;
+
+    private static final class KeyHelp {
+        final String help;
+        final String[] codes;
+
+        KeyHelp(String help, String[] codes) {
+            this.help = help;
+            this.codes = codes;
+        }
+    }
+
+    private static final class Setting {
+        final String[] options;
+        final Consumer<String> onChange;
+        String value;
+
+        Setting(String[] options, Consumer<String> onChange) {
+            this.options = options;
+            this.onChange = onChange;
+            this.value = options[0];
+        }
+    }
 
     private static final class LogLine {
         final int tick;
@@ -100,6 +143,42 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
     /** Runs {@code action} after every tick, e.g. to pretend the world changed. */
     public TreeVisualizer afterEachTick(Runnable action) {
         afterTicks.add(action);
+        return this;
+    }
+
+    /**
+     * Draws a picture next to the tree, such as the field and the robot, refreshed many times a
+     * second. {@code json} returns {@code {"width": w, "height": h, "shapes": [...]}} in any units
+     * (y points up); see index.html for the shapes it can draw. Runs on the tree's thread.
+     */
+    public TreeVisualizer scene(Supplier<String> json) {
+        this.scene = json;
+        return this;
+    }
+
+    /**
+     * Passes these keys to the program while the page has focus, instead of the page's own
+     * shortcuts, and lists them under Controls. Keys are {@code KeyboardEvent.code} values, like
+     * {@code "ArrowUp"}, {@code "Space"} or {@code "KeyF"}. Read them with {@link #isHeld}.
+     */
+    public TreeVisualizer key(String help, String... codes) {
+        keys.add(new KeyHelp(help, codes));
+        return this;
+    }
+
+    /** Whether a key passed with {@link #key} is held down in the page right now. */
+    public boolean isHeld(String code) {
+        synchronized (lock) {
+            return held.contains(code);
+        }
+    }
+
+    /**
+     * A drop-down in the page; picking an option calls {@code onChange} with it and restarts.
+     * The first option is the starting one; {@code onChange} is not called for it.
+     */
+    public TreeVisualizer setting(String name, Consumer<String> onChange, String... options) {
+        settings.put(name, new Setting(options, onChange));
         return this;
     }
 
@@ -133,7 +212,7 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
         console.println("Behavior tree visualizer: open " + url + " in your browser.");
         console.println("Press Play or Step there to run the tree. Stop this program to quit.");
         console.println();
-        if (!inContainer) {
+        if (!inContainer && !"false".equals(System.getProperty("visualizer.browser"))) {
             openBrowser(url);
         }
 
@@ -151,12 +230,16 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
                     reset();
                 }
                 long now = System.nanoTime();
+                if (!held.isEmpty() && now - heldNanos > KEY_TIMEOUT_NANOS) held.clear();
                 if (stepsRequested > 0) {
                     stepsRequested--;
                     tick();
                 } else if (playing && now >= nextTick) {
                     tick();
-                    nextTick = now + periodMs * 1_000_000L;
+                    // Keep a steady rate (a late tick doesn't push back the rest), but don't rush to
+                    // catch up after a pause or a long hiccup
+                    long period = periodMs * 1_000_000L;
+                    nextTick = nextTick + period < now - 5 * period ? now + period : nextTick + period;
                 }
                 if (finished || error != null) {
                     playing = false;
@@ -301,15 +384,59 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
                     json = state();
                 }
                 return new Response(200, "application/json", json.getBytes(StandardCharsets.UTF_8));
+            case "/api/scene":
+                String picture;
+                synchronized (lock) {
+                    picture = sceneJson();
+                }
+                return new Response(200, "application/json",
+                        (picture == null ? "null" : picture).getBytes(StandardCharsets.UTF_8));
+            case "/api/stream":
+                // The state and the scene, pushed over one connection as they change
+                return new WebServer.Stream(this::stream);
             case "/api/control":
                 if (!request.method.equals("POST")) return Response.text(405, "Use POST");
-                return control(request.query.getOrDefault("action", ""), request.query.getOrDefault("value", ""));
+                return control(request.query.getOrDefault("action", ""), request.query.getOrDefault("value", ""),
+                        request.query);
             default:
                 return Response.text(404, "Not found");
         }
     }
 
-    private Response control(String action, String value) {
+    private void stream(OutputStream out) throws IOException, InterruptedException {
+        long nextState = 0;
+        while (true) {
+            String stateJson = null;
+            String sceneJson;
+            boolean isPlaying;
+            long now = System.nanoTime() / 1_000_000L;
+            synchronized (lock) {
+                if (now >= nextState) stateJson = state();
+                sceneJson = sceneJson();
+                isPlaying = playing;
+            }
+            // Written outside the lock, so a slow connection never holds up the tree
+            if (stateJson != null) {
+                WebServer.send(out, "state", stateJson);
+                nextState = now + STATE_MS;
+            }
+            if (sceneJson != null) WebServer.send(out, "scene", sceneJson);
+            Thread.sleep(sceneJson != null && isPlaying ? SCENE_PLAYING_MS
+                    : sceneJson != null ? SCENE_PAUSED_MS : STATE_MS);
+        }
+    }
+
+    /** The scene's JSON, or null if there is no scene (or drawing it failed). */
+    private String sceneJson() {
+        if (scene == null) return null;
+        try {
+            return scene.get();
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private Response control(String action, String value, Map<String, String> query) {
         synchronized (lock) {
             switch (action) {
                 case "play":
@@ -323,6 +450,25 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
                     stepsRequested++;
                     break;
                 case "restart":
+                    restartRequested = true;
+                    break;
+                case "keys":
+                    long stamp = parseLong(query.get("stamp"));
+                    if (stamp < heldStamp) break;   // An older update that arrived late
+                    heldStamp = stamp;
+                    heldNanos = System.nanoTime();
+                    held.clear();
+                    for (String code : value.split(",")) {
+                        if (!code.isEmpty()) held.add(code);
+                    }
+                    break;
+                case "setting":
+                    Setting setting = settings.get(query.getOrDefault("name", ""));
+                    if (setting == null || !java.util.Arrays.asList(setting.options).contains(value)) {
+                        return Response.text(400, "Unknown setting");
+                    }
+                    setting.value = value;
+                    setting.onChange.accept(value);
                     restartRequested = true;
                     break;
                 case "period":
@@ -352,7 +498,24 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
                 .field("periodMs", periodMs)
                 .field("lastAction", lastAction)
                 .field("error", error)
-                .field("errorNode", errorNode);
+                .field("errorNode", errorNode)
+                .field("hasScene", scene != null);
+
+        json.name("keys").beginArray();
+        for (KeyHelp key : keys) {
+            json.begin().field("help", key.help).name("codes").beginArray();
+            for (String code : key.codes) json.value(code);
+            json.endArray().end();
+        }
+        json.endArray();
+
+        json.name("settings").beginArray();
+        for (Map.Entry<String, Setting> entry : settings.entrySet()) {
+            json.begin().field("name", entry.getKey()).field("value", entry.getValue().value).name("options").beginArray();
+            for (String option : entry.getValue().options) json.value(option);
+            json.endArray().end();
+        }
+        json.endArray();
 
         json.name("watches").beginArray();
         for (Map.Entry<String, Supplier<?>> watch : watches.entrySet()) {
@@ -390,6 +553,7 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
         json.begin()
                 .field("id", info.id)
                 .field("type", info.type())
+                .field("name", info.name)
                 .field("kind", BehaviorTree.kind(info))
                 .field("label", info.label)
                 .field("description", BehaviorTree.describe(info))
@@ -424,6 +588,14 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
             byte[] buffer = new byte[8192];
             for (int n; (n = page.read(buffer)) > 0; ) bytes.write(buffer, 0, n);
             return bytes.toByteArray();
+        }
+    }
+
+    private static long parseLong(String text) {
+        try {
+            return text == null ? 0 : Long.parseLong(text);
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 

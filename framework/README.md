@@ -96,6 +96,7 @@ Conditions are plain lambdas (`BooleanSupplier`), so anything that returns a boo
 | `.invert()` | [`Invert`](src/behavior/decorator/Invert.java) | Swaps SUCCESS and FAILURE |
 | `.alwaysSucceed()` | [`AlwaysSucceed`](src/behavior/decorator/AlwaysSucceed.java) | Reports SUCCESS even on failure, e.g. "try for 2 s, then carry on regardless": `x.withTimeout(2000).alwaysSucceed()` |
 | `.onlyWhile(cond)` | [`Guard`](src/behavior/decorator/Guard.java) | Checks `cond` every tick; halts the node and fails as soon as it's false |
+| `.named("...")` | [`Named`](src/behavior/decorator/Named.java) | Changes nothing about how it runs; gives it a name the visualizer shows, e.g. `condition(() -> gamepad1.a).named("A held?")` |
 
 ---
 
@@ -138,6 +139,34 @@ A [`Subsystem`](src/subsystem/Subsystem.java) is one mechanism (drivetrain, inta
 Subsystems are created in [`robot/src/robot/Robot.java`](../robot/src/robot/Robot.java). See [`examples/ftc/Intake.java`](../examples/ftc/Intake.java) for a complete one.
 
 Two behaviors that drive the same motor at the same time will fight over it (the last `setPower` wins). Design bindings and trees so that one behavior uses a mechanism at a time.
+
+---
+
+## Math helpers
+
+[`util.MathUtil`](src/util/MathUtil.java) has the small bits of math every robot needs, so nobody rewrites them inside a node. Use `import static util.MathUtil.*;`:
+
+| Method | Does |
+|--------|------|
+| `clamp(value, min, max)` / `clampPower(value)` | Keeps a value in range; `clampPower` to a motor's -1..1 |
+| `approach(current, target, maxStep)` | Steps toward a target by at most `maxStep`, e.g. to ramp a value each loop |
+| `wrapAngle(radians)` | The same angle between -π and π |
+| `angleError(target, current)` | How far to turn to face `target`, the short way round |
+| `distance(x1, y1, x2, y2)` | Straight-line distance |
+| `toRobotFrame(dx, dy, heading)` / `toFieldFrame(forward, left, heading)` | Turns a direction on the field into one as the robot sees it (forward, left), and back |
+
+Angles are radians, counter-clockwise positive. If you find yourself writing the same formula in two places, add it here (with a test in [`test/util/`](test/util/)).
+
+## Logging
+
+[`util.Log`](src/util/Log.java) writes leveled messages (`DEBUG`, `INFO`, `WARN`, `ERROR`), by default to standard out:
+
+```java
+Log.debug("Intake", "picked up ball %d, %d held", id, count);   // DEBUG [Intake] picked up ball 4, 2 held
+Log.info("Auto", "parked");
+```
+
+Only messages at or above the level are printed, and only those are formatted, so leaving debug calls in costs almost nothing. The level comes from `-Dlog.level=debug` (default `INFO`), or set it in code with `Log.setLevel(Log.Level.DEBUG)`. To send messages somewhere else (the FTC SDK's `RobotLog`, telemetry), pass a `Log.Sink` to `Log.setSink`.
 
 ---
 

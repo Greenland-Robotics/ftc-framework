@@ -55,6 +55,15 @@
       "problemMatcher": []
     },
     {
+      "label": "Run hive game",
+      "detail": "Drive a simulated robot through the hive game with the keyboard at http://localhost:8765",
+      "type": "shell",
+      "command": "./gradlew",
+      "windows": { "command": ".\\gradlew.bat" },
+      "args": [":examples:hive"],
+      "problemMatcher": []
+    },
+    {
       "label": "Refresh VS Code classpath",
       "detail": "Export library jars so VS Code can resolve FTC SDK and Pedro Pathing classes",
       "type": "shell",

@@ -24,6 +24,24 @@
     --error: #9f1239;
     --error-soft: #fde8ee;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    /* Colors a scene can name */
+    --scene-field: #e8ebf0;
+    --scene-tile: #d2d7df;
+    --scene-line: #9aa3b2;
+    --scene-board: #ffffff;
+    --scene-ink: #1c2330;
+    --scene-muted: #677286;
+    --scene-good: #15803d;
+    --scene-red: #dc2626;
+    --scene-redSoft: #fde3e3;
+    --scene-blue: #2563eb;
+    --scene-blueSoft: #dfe8ff;
+    --scene-ball: #ffffff;
+    --scene-ballEdge: #7a8292;
+    --scene-softball: #facc15;
+    --scene-hive: #eadcb9;
+    --scene-hiveEdge: #8a6a2a;
+    --scene-shadow: rgba(20, 25, 35, .18);
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
@@ -45,6 +63,23 @@
       --halted-soft: #3a2415;
       --error: #ff7aa2;
       --error-soft: #3d1624;
+      --scene-field: #1d222b;
+      --scene-tile: #2a303b;
+      --scene-line: #4a5263;
+      --scene-board: #191d25;
+      --scene-ink: #e6e9ef;
+      --scene-muted: #9099aa;
+      --scene-good: #4fc775;
+      --scene-red: #f36b6b;
+      --scene-redSoft: #3f1c1f;
+      --scene-blue: #6d9bff;
+      --scene-blueSoft: #1b2a4a;
+      --scene-ball: #f4f5f7;
+      --scene-ballEdge: #8b93a3;
+      --scene-softball: #f5c518;
+      --scene-hive: #4a3f27;
+      --scene-hiveEdge: #c9a85c;
+      --scene-shadow: rgba(0, 0, 0, .45);
       color-scheme: dark;
     }
   }
@@ -85,13 +120,69 @@
   .controls select { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
   .controls label { color: var(--muted); font-size: 13px; display: flex; gap: 6px; align-items: center; }
 
+  /* Tree | splitter | side panels. Drag the splitter to give either side more room. */
   .layout {
-    display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 16px var(--side, 340px); gap: 2px;
     padding: 20px; align-items: start;
   }
-  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); padding: 16px; } }
+  body.has-scene .layout { grid-template-columns: minmax(0, 1fr) 16px var(--side, 520px); }
+  @media (max-width: 900px) {
+    .layout, body.has-scene .layout { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 16px; }
+    .splitter { display: none; }
+    /* With a scene, the field comes first on narrow screens */
+    body.has-scene aside { order: -1; }
+  }
+  .splitter { align-self: stretch; cursor: col-resize; touch-action: none; }
+  .splitter > div {
+    position: sticky; top: 76px; height: calc(100vh - 96px);
+    display: flex; justify-content: center;
+  }
+  .splitter > div::before {
+    content: ""; width: 4px; border-radius: 2px; background: var(--line); transition: background .15s;
+  }
+  .splitter:hover > div::before, .splitter.dragging > div::before { background: var(--running); }
+  body.resizing { cursor: col-resize; user-select: none; }
 
   .tree-pane { overflow-x: auto; padding-bottom: 8px; }
+
+  .scene-wrap { position: relative; }
+  #scene { display: block; width: 100%; height: auto; border-radius: 8px; outline: none; }
+  .scene-note {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none; text-align: center;
+  }
+  .scene-note span {
+    background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line);
+    padding: 8px 14px; border-radius: 10px; font-weight: 600; box-shadow: 0 4px 18px rgba(0,0,0,.12);
+  }
+  .scene-note:empty { display: none; }
+  .scene-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .scene-bar button {
+    padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel); cursor: pointer; font-size: 13px;
+  }
+  .scene-bar button:hover { background: var(--soft); }
+  .scene-bar .fs-only { display: none; }
+  #fullscreen { margin-left: auto; }
+  #scene-active { font-size: 13px; color: var(--muted); display: none; }
+  #scene-active b { color: var(--running); font-weight: 600; }
+
+  /* Full screen (or filling the window, where full screen isn't allowed): just the field, as big as fits, with what the tree is running underneath */
+  /* The side panels are sticky, which keeps the field under the header unless they come forward */
+  body.scene-maximized aside { z-index: 20; }
+  body.scene-maximized { overflow: hidden; }
+  #scene-panel.maximized {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: var(--bg); border: 0; border-radius: 0; padding: 12px;
+  }
+  #scene-panel.maximized .scene-bar { width: min(100%, calc((100vh - 110px) * var(--aspect, 0.87))); margin: 0; }
+  #scene-panel.maximized .scene-wrap { width: min(100%, calc((100vh - 110px) * var(--aspect, 0.87))); }
+  #scene-panel.maximized .fs-only { display: inline-block; }
+  #scene-panel.maximized #scene-active { display: block; width: min(100%, calc((100vh - 110px) * var(--aspect, 0.87))); }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; font-size: 13px; }
+  .keys .combo { display: flex; gap: 3px; flex-wrap: wrap; }
+  .keys kbd.down { background: var(--running); border-color: var(--running); color: #fff; }
   #tree { width: max-content; min-width: 100%; }
 
   aside { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 76px; }
@@ -163,6 +254,19 @@
   .node.ticked > .card .dot { animation: pulse 1s ease-in-out infinite; }
   @keyframes pulse { 50% { transform: scale(1.5); opacity: .55; } }
   .type { font-weight: 650; }
+  .kind-name { font-size: 11.5px; color: var(--muted); font-family: var(--mono); }
+  .twisty {
+    flex: none; width: 20px; height: 20px; margin: -2px -2px -2px -6px; padding: 0;
+    border: 0; border-radius: 5px; background: none; color: var(--muted); cursor: pointer;
+    font-size: 11px; line-height: 20px; transition: transform .15s;
+  }
+  .twisty:hover { background: var(--soft); color: var(--ink); }
+  .node.collapsed > .card .twisty { transform: rotate(-90deg); }
+  .node.collapsed > .kids { display: none; }
+  .inside { font-size: 12px; margin-top: 4px; color: var(--muted); }
+  .inside b { color: var(--running); font-weight: 600; }
+  .node:not(.collapsed) > .card .inside { display: none; }
+  .kind-name:empty { display: none; }
   .badge { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--c); text-transform: uppercase; letter-spacing: .04em; }
   .desc { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
   .stats { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
@@ -217,6 +321,9 @@
     <button id="step" title="Tick once (→)">Step: tick()</button>
     <button id="play" class="primary" title="Play or pause (space)">Play</button>
     <button id="restart" title="Build the routine again and start over (R)">Restart</button>
+    <button id="expand" title="Open every node in the tree">Expand all</button>
+    <button id="collapse" title="Close everything below the top two levels">Collapse</button>
+    <span id="settings" class="controls" style="margin-left: 0"></span>
     <label>Speed
       <select id="period">
         <option value="20">Real time: tick every 20 ms</option>
@@ -231,8 +338,27 @@
 
 <main class="layout">
   <section class="tree-pane" aria-label="Behavior tree"><div id="tree"></div></section>
+  <div class="splitter" id="splitter" title="Drag to resize; double-click to reset"><div></div></div>
 
   <aside>
+    <div class="panel" id="scene-panel" hidden>
+      <div class="scene-bar">
+        <button id="fs-play" class="fs-only">Play</button>
+        <button id="fs-restart" class="fs-only">Restart</button>
+        <button id="fullscreen" title="Show the field full screen (double-click it too; Esc to leave)">⛶ Full screen</button>
+      </div>
+      <div class="scene-wrap">
+        <canvas id="scene" width="520" height="580" tabindex="0" aria-label="Field"></canvas>
+        <div id="scene-note" class="scene-note"></div>
+      </div>
+      <div id="scene-active"></div>
+    </div>
+
+    <div class="panel" id="keys-panel" hidden>
+      <h2>Controls</h2>
+      <div id="keys" class="keys"></div>
+    </div>
+
     <div class="panel">
       <h2>Last step</h2>
       <div id="last" class="step-text"></div>
@@ -268,7 +394,7 @@
         children to tick, so the glowing nodes are the path the tick took. Colors show what each
         node returned the last time it was ticked.
       </p>
-      <p class="help">Keys: <kbd>→</kbd> step, <kbd>space</kbd> play/pause, <kbd>R</kbd> restart.</p>
+      <p class="help" id="shortcuts">Keys: <kbd>→</kbd> step, <kbd>space</kbd> play/pause, <kbd>R</kbd> restart.</p>
     </div>
   </aside>
 </main>
@@ -295,17 +421,32 @@
     node.dataset.id = n.id;
     const card = el("div", "card");
     const head = el("div", "card-head");
-    head.append(el("span", "dot"), el("span", "type", n.type));
+    if (n.children.length) {
+      const twisty = el("button", "twisty", "▼");
+      twisty.title = "Collapse or expand (Alt-click: everything inside too)";
+      twisty.addEventListener("click", (e) => {
+        twisty.blur();
+        const collapse = !collapsed.has(n.id);
+        (e.altKey ? descendants(n, []) : [n]).forEach((d) => setCollapsed(d.id, collapse));
+        saveCollapsed();
+      });
+      head.append(twisty);
+    }
+    // A named node shows its name, with its kind of node underneath
+    head.append(el("span", "dot"), el("span", "type", n.name || n.type));
     const badge = el("span", "badge");
     head.append(badge);
+    const kindName = el("div", "kind-name", n.name ? n.type : "");
     const desc = el("div", "desc");
     const stats = el("div", "stats");
     const out = el("div", "out");
-    card.append(head, desc, stats, out);
+    const inside = el("div", "inside");
+    card.append(head, kindName, desc, stats, out, inside);
     node.append(card);
+    node.classList.toggle("collapsed", collapsed.has(n.id));
 
     if (!views.has(n.id)) views.set(n.id, []);
-    views.get(n.id).push({ node, badge, stats, out, desc });
+    views.get(n.id).push({ node, badge, stats, out, desc, inside });
 
     if (n.children.length) {
       node.classList.add("composite");
@@ -322,7 +463,7 @@
     return node;
   }
 
-  // ---- Updating it (every poll) ----
+  // ---- Updating it (every state update) ----
 
   const STATUS_TEXT = {
     idle: "", running: "running", success: "success", failure: "failure", halted: "halted", error: "threw"
@@ -344,6 +485,17 @@
         if (n.ms != null) parts.push(seconds(n.ms));
       }
       v.stats.textContent = parts.join(" · ");
+      if (n.children.length && collapsed.has(n.id)) {
+        // Hidden children: say which of them are doing something right now
+        const active = runningLeaves(n, []);
+        const text = active.join("\u0000");
+        if (v.inside.dataset.text !== text) {
+          v.inside.dataset.text = text;
+          v.inside.replaceChildren(...(active.length
+              ? ["Running inside: ", ...active.flatMap((a, i) => [i ? ", " : "", el("b", null, a)])]
+              : ["Nothing running inside"]));
+        }
+      }
       const lines = n.output.join("\n");
       if (v.out.dataset.lines !== lines) {
         v.out.dataset.lines = lines;
@@ -351,6 +503,36 @@
       }
     }
     n.children.forEach((child) => update(child, errorNode));
+  }
+
+  // ---- Collapsing ----
+
+  // Node ids are stable across restarts of the same routine, so what you collapsed stays collapsed
+  const STORE = "collapsed:" + location.port;
+  const collapsed = new Set(loadCollapsed());
+
+  function loadCollapsed() {
+    try { return JSON.parse(localStorage.getItem(STORE)) || []; } catch (e) { return []; }
+  }
+  function saveCollapsed() {
+    try { localStorage.setItem(STORE, JSON.stringify([...collapsed])); } catch (e) { /* not kept */ }
+  }
+  function setCollapsed(id, on) {
+    if (on) collapsed.add(id); else collapsed.delete(id);
+    for (const v of views.get(id) || []) v.node.classList.toggle("collapsed", on);
+    if (state && state.root) update(state.root, state.errorNode);
+  }
+  function descendants(n, out) {
+    if (n.children.length) out.push(n);
+    n.children.forEach((c) => descendants(c, out));
+    return out;
+  }
+  function runningLeaves(n, out) {
+    n.children.forEach((c) => {
+      if (c.state !== "running") return;
+      if (c.children.length) runningLeaves(c, out); else out.push(c.name || c.type);
+    });
+    return out;
   }
 
   function names(n, map) {
@@ -392,6 +574,7 @@
     $("watches").replaceChildren(...s.watches.flatMap((w) => [el("dt", null, w.name), el("dd", null, w.value)]));
 
     renderLog(s);
+    renderExtras(s);
   }
 
   let logKey = "";
@@ -432,19 +615,32 @@
 
   // ---- Talking to the program ----
 
-  async function poll() {
-    try {
-      const response = await fetch("api/state", { cache: "no-store" });
-      state = await response.json();
+  // The program pushes its state (10 times a second) and its scene (up to 30) over one
+  // connection, so a slow link (like a dev container's port forwarding) only costs once
+  let source = null;
+  let lastEvent = 0;
+  function connect() {
+    if (source) source.close();
+    source = new EventSource("api/stream");
+    lastEvent = Date.now();
+    source.addEventListener("state", (e) => {
+      lastEvent = Date.now();
+      state = JSON.parse(e.data);
       document.body.classList.remove("offline");
       render(state);
-    } catch (e) {
+    });
+    source.addEventListener("scene", (e) => {
+      lastEvent = Date.now();
+      latestScene = JSON.parse(e.data);
+      if (!sceneFrame) sceneFrame = requestAnimationFrame(() => { sceneFrame = 0; drawScene(latestScene); });
+    });
+    source.addEventListener("error", () => {
+      // EventSource reconnects by itself
       document.body.classList.add("offline");
       const status = $("status");
       status.className = "pill offline";
       status.textContent = "offline";
-    }
-    setTimeout(poll, 100);
+    });
   }
 
   function control(action, value) {
@@ -457,16 +653,290 @@
   $("step").addEventListener("click", () => control("step"));
   $("play").addEventListener("click", () => control(state && state.playing ? "pause" : "play"));
   $("restart").addEventListener("click", () => control("restart"));
+  $("expand").addEventListener("click", () => {
+    if (!state || !state.root) return;
+    descendants(state.root, []).forEach((d) => setCollapsed(d.id, false));
+    saveCollapsed();
+  });
+  $("collapse").addEventListener("click", () => {
+    if (!state || !state.root) return;
+    // Keep the top two levels and every parallel open, so things that run at the same time
+    // (like the TeleOp's lanes) stay visible, each folded up
+    const keepOpen = new Set([state.root.id]);
+    state.root.children.forEach((c) => keepOpen.add(c.id));
+    descendants(state.root, []).forEach((d) => { if (d.kind === "parallel") keepOpen.add(d.id); });
+    descendants(state.root, []).forEach((d) => setCollapsed(d.id, !keepOpen.has(d.id)));
+    saveCollapsed();
+  });
   $("period").addEventListener("change", (e) => control("period", e.target.value));
 
   document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "SELECT" || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (forwarded.has(e.code)) {
+      // The program reads this key (e.g. to drive): it isn't a page shortcut
+      e.preventDefault();
+      if (!held.has(e.code)) { held.add(e.code); sendKeys(); }
+      return;
+    }
+    if (e.key === "Escape" && isMaximized()) { setMaximized(false); return; }
     if (e.key === "ArrowRight") { control("step"); e.preventDefault(); }
     else if (e.key === " ") { $("play").click(); e.preventDefault(); }
+    else if (e.key === "p" || e.key === "P") $("play").click();
     else if (e.key === "r" || e.key === "R") control("restart");
   });
+  document.addEventListener("keyup", (e) => {
+    if (held.delete(e.code)) { sendKeys(); e.preventDefault(); }
+  });
+  // Let go of everything when the page loses focus, so the robot doesn't drive off on its own
+  window.addEventListener("blur", () => { if (held.size) { held.clear(); sendKeys(); } });
 
-  poll();
+  // ---- Resizing and full screen ----
+
+  const SIDE_STORE = "side:" + location.port;
+  function sideKey() { return SIDE_STORE + (document.body.classList.contains("has-scene") ? ":scene" : ""); }
+  function applySide() {
+    let width = null;
+    try { width = localStorage.getItem(sideKey()); } catch (e) { /* default */ }
+    const layout = document.querySelector(".layout");
+    if (width) layout.style.setProperty("--side", width + "px"); else layout.style.removeProperty("--side");
+  }
+  (() => {
+    const splitter = $("splitter");
+    const layout = document.querySelector(".layout");
+    let width = null;
+    splitter.addEventListener("pointerdown", (e) => {
+      splitter.setPointerCapture(e.pointerId);
+      splitter.classList.add("dragging");
+      document.body.classList.add("resizing");
+      e.preventDefault();
+    });
+    splitter.addEventListener("pointermove", (e) => {
+      if (!splitter.hasPointerCapture(e.pointerId)) return;
+      const box = layout.getBoundingClientRect();
+      const padding = parseFloat(getComputedStyle(layout).paddingRight);
+      // Leave at least a sliver of each side, so neither can be lost
+      width = Math.round(Math.max(240, Math.min(box.width - 2 * padding - 160, box.right - padding - e.clientX - 8)));
+      layout.style.setProperty("--side", width + "px");
+    });
+    const stop = (e) => {
+      if (!splitter.hasPointerCapture(e.pointerId)) return;
+      splitter.releasePointerCapture(e.pointerId);
+      splitter.classList.remove("dragging");
+      document.body.classList.remove("resizing");
+      if (width) { try { localStorage.setItem(sideKey(), width); } catch (err) { /* not kept */ } }
+    };
+    splitter.addEventListener("pointerup", stop);
+    splitter.addEventListener("pointercancel", stop);
+    splitter.addEventListener("dblclick", () => {
+      try { localStorage.removeItem(sideKey()); } catch (e) { /* nothing kept */ }
+      applySide();
+    });
+  })();
+
+  // Fills the window, and also goes full screen where the browser allows it
+  function isMaximized() { return $("scene-panel").classList.contains("maximized"); }
+  function setMaximized(on) {
+    $("scene-panel").classList.toggle("maximized", on);
+    document.body.classList.toggle("scene-maximized", on);
+    $("fullscreen").textContent = on ? "Exit full screen" : "⛶ Full screen";
+    if (on && !document.fullscreenElement && $("scene-panel").requestFullscreen) {
+      $("scene-panel").requestFullscreen().catch(() => {});
+    } else if (!on && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    if (state) renderExtras(state);
+  }
+  function toggleFullscreen() { setMaximized(!isMaximized()); }
+  $("fullscreen").addEventListener("click", (e) => { e.currentTarget.blur(); toggleFullscreen(); });
+  $("scene").addEventListener("dblclick", toggleFullscreen);
+  $("fs-play").addEventListener("click", (e) => { e.currentTarget.blur(); $("play").click(); });
+  $("fs-restart").addEventListener("click", (e) => { e.currentTarget.blur(); control("restart"); });
+  // Leaving full screen with the browser's own Esc also leaves the filled window
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement && isMaximized()) setMaximized(false);
+  });
+
+  // ---- Keys passed to the program ----
+
+  const forwarded = new Set();
+  const held = new Set();
+  let keysTimer = null;
+
+  function sendKeys() {
+    const query = "action=keys&value=" + encodeURIComponent([...held].join(",")) + "&stamp=" + Date.now();
+    fetch("api/control?" + query, { method: "POST" }).catch(() => {});
+    renderKeys();
+    // While keys are down, repeat now and then: the program lets go of keys it stops hearing about
+    clearTimeout(keysTimer);
+    if (held.size) keysTimer = setTimeout(sendKeys, 300);
+  }
+
+  const KEY_NAMES = {
+    ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→", Space: "Space",
+    ShiftLeft: "Shift", ShiftRight: "Shift", Enter: "Enter", Escape: "Esc", Tab: "Tab"
+  };
+  function keyName(code) {
+    return KEY_NAMES[code] || code.replace(/^Key|^Digit/, "");
+  }
+
+  let keysKey = "";
+  function renderExtras(s) {
+    // Keys and settings only change on restart, so rebuild them only when they differ
+    const key = JSON.stringify([s.keys, s.settings]);
+    if (key !== keysKey) {
+      keysKey = key;
+      forwarded.clear();
+      s.keys.forEach((k) => k.codes.forEach((c) => forwarded.add(c)));
+      $("keys-panel").hidden = s.keys.length === 0;
+      $("keys").replaceChildren(...s.keys.flatMap((k) => {
+        const combo = el("span", "combo");
+        const names = [];
+        k.codes.forEach((c) => {
+          if (names.includes(keyName(c))) return;
+          names.push(keyName(c));
+          const kbd = el("kbd", null, keyName(c));
+          kbd.dataset.codes = k.codes.filter((other) => keyName(other) === keyName(c)).join(" ");
+          combo.append(kbd);
+        });
+        return [combo, el("span", null, k.help)];
+      }));
+      const shortcuts = [];
+      if (!forwarded.has("ArrowRight")) shortcuts.push("<kbd>→</kbd> step");
+      shortcuts.push((forwarded.has("Space") ? "" : "<kbd>space</kbd> or ") + "<kbd>P</kbd> play/pause");
+      if (!forwarded.has("KeyR")) shortcuts.push("<kbd>R</kbd> restart");
+      $("shortcuts").innerHTML = "Keys: " + shortcuts.join(", ") + ".";
+
+      $("settings").replaceChildren(...s.settings.map((setting) => {
+        const select = el("select");
+        select.title = setting.name;
+        setting.options.forEach((o) => select.append(new Option(o, o, false, o === setting.value)));
+        select.addEventListener("change", () => {
+          fetch("api/control?action=setting&name=" + encodeURIComponent(setting.name)
+              + "&value=" + encodeURIComponent(select.value), { method: "POST" }).catch(() => {});
+          select.blur();
+        });
+        return select;
+      }));
+      renderKeys();
+    }
+    if (document.body.classList.contains("has-scene") !== s.hasScene) {
+      document.body.classList.toggle("has-scene", s.hasScene);
+      applySide();
+    }
+    $("scene-panel").hidden = !s.hasScene;
+
+    const note = !s.hasScene ? ""
+        : s.error ? ""
+        : s.finished ? "Finished. Press Restart to go again."
+        : !s.playing ? (s.started ? "Paused: press Play" : "Press Play to start")
+            + (isMaximized() ? " (or P)" : "")
+            + (forwarded.size && !isMaximized() ? ", then drive with the keys below" : "")
+        : "";
+    if ($("scene-note").textContent !== note) {
+      $("scene-note").replaceChildren(...(note ? [el("span", null, note)] : []));
+    }
+
+    // Full screen hides the tree, so list what it is running under the field
+    $("fs-play").textContent = s.playing ? "Pause" : "Play";
+    $("fs-play").disabled = s.finished || !!s.error;
+    if (isMaximized() && s.root) {
+      const active = s.root.state === "running" ? runningLeaves(s.root, []) : [];
+      const text = active.join("\u0000");
+      if ($("scene-active").dataset.text !== text) {
+        $("scene-active").dataset.text = text;
+        $("scene-active").replaceChildren(...(active.length
+            ? ["Tree running: ", ...active.flatMap((a, i) => [i ? " · " : "", el("b", null, a)])]
+            : ["Tree not running"]));
+      }
+    }
+  }
+
+  function renderKeys() {
+    document.querySelectorAll("#keys kbd").forEach((kbd) => {
+      kbd.classList.toggle("down", kbd.dataset.codes.split(" ").some((c) => held.has(c)));
+    });
+  }
+
+  // ---- Scene: a picture the program draws, like the field ----
+
+  let latestScene = null;
+  let sceneFrame = 0;
+  const colors = new Map();
+  const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  darkQuery.addEventListener("change", () => colors.clear());
+
+  function color(name) {
+    if (!name) return null;
+    if (!colors.has(name)) {
+      const value = getComputedStyle(document.documentElement).getPropertyValue("--scene-" + name).trim();
+      colors.set(name, value || name);   // Not one of ours: a CSS color like "#ff0000"
+    }
+    return colors.get(name);
+  }
+
+  function drawScene(scene) {
+    const canvas = $("scene");
+    const ratio = window.devicePixelRatio || 1;
+    const cssWidth = canvas.clientWidth || 520;
+    const width = Math.round(cssWidth * ratio);
+    const height = Math.round(cssWidth * scene.height / scene.width * ratio);
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    canvas.parentElement.parentElement.style.setProperty("--aspect", scene.width / scene.height);
+    const k = width / scene.width;
+    const X = (x) => x * k;
+    const Y = (y) => (scene.height - y) * k;   // The scene's y points up
+    const g = canvas.getContext("2d");
+    g.clearRect(0, 0, width, height);
+    g.lineCap = "round";
+    g.lineJoin = "round";
+
+    function paint(shape) {
+      if (shape.fill) { g.fillStyle = color(shape.fill); g.fill(); }
+      if (shape.stroke && shape.lw !== 0) {
+        g.strokeStyle = color(shape.stroke);
+        g.lineWidth = (shape.lw || 0.5) * k;
+        g.setLineDash((shape.dash || []).map((d) => d * k));
+        g.stroke();
+        g.setLineDash([]);
+      }
+    }
+
+    for (const shape of scene.shapes) {
+      g.beginPath();
+      if (shape.t === "rect") {
+        g.save();
+        g.translate(X(shape.x), Y(shape.y));
+        g.rotate(-(shape.a || 0));
+        g.rect(-shape.w * k / 2, -shape.h * k / 2, shape.w * k, shape.h * k);
+        paint(shape);
+        g.restore();
+      } else if (shape.t === "circle") {
+        g.arc(X(shape.x), Y(shape.y), Math.max(0, shape.r * k), 0, Math.PI * 2);
+        paint(shape);
+      } else if (shape.t === "line" || shape.t === "poly") {
+        const p = shape.pts;
+        g.moveTo(X(p[0]), Y(p[1]));
+        for (let i = 2; i < p.length; i += 2) g.lineTo(X(p[i]), Y(p[i + 1]));
+        if (shape.t === "poly") g.closePath();
+        paint(shape);
+      } else if (shape.t === "text") {
+        g.font = (shape.bold ? "650 " : "") + (shape.size * k) + "px system-ui, -apple-system, sans-serif";
+        g.textAlign = shape.align || "center";
+        g.textBaseline = "middle";
+        g.fillStyle = color(shape.fill || "ink");
+        g.fillText(shape.text, X(shape.x), Y(shape.y));
+      }
+    }
+  }
+
+  applySide();
+  connect();
+  // The program sends something at least every 0.2 s; a connection that goes quiet for longer
+  // (port forwarding can stall one without closing it) is replaced instead of waited on
+  setInterval(() => { if (Date.now() - lastEvent > 1500) connect(); }, 500);
 })();
 </script>
 </body>
