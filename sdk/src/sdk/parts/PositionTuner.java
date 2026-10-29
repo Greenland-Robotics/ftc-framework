@@ -349,6 +349,21 @@ final class PositionTuner extends Action {
         part.setGains(original[0], original[1], original[2], original[3]);
     }
 
+    /** Where it is, for the behavior tree visualizer and debugging. */
+    @Override
+    public String toString() {
+        if (phase == null) return "Tunes gravity, friction, kP and kD by itself";
+        switch (phase) {
+            case RAMP_UP: return String.format(java.util.Locale.ROOT, "1/3 Raising the power until it moves up: %.2f", power);
+            case LIFT_OFF: return "1/3 Lifting it clear of the bottom";
+            case RAMP_DOWN: return String.format(java.util.Locale.ROOT, "1/3 Lowering the power until it moves down: %.2f", power);
+            case RELAY: return String.format(java.util.Locale.ROOT, "2/3 Swinging around %s, ±%.2f power: %d swings measured",
+                    TuneReport.number(mid), relay, periods.size());
+            case DONE: return report.failed() ? "Stopped: " + report.failure() : "Done: " + part.codeLine();
+            default: return String.format(java.util.Locale.ROOT, "3/3 Test moves, round %d: %s", round + 1, part.codeLine());
+        }
+    }
+
     private static double average(List<Double> values) {
         double sum = 0;
         for (double value : values) sum += value;

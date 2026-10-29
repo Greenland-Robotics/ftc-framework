@@ -4,7 +4,7 @@
 // Builds and runs the laptop examples in general/ (plain Java, no Android), such as the
 // behavior tree visualizer:
 //
-//      ./gradlew :examples:run       the behavior tree basics
+//      ./gradlew :examples:run       every example in one page: pick one from the drop-down
 //      ./gradlew :examples:hive      play a hive game match: Auto, and TeleOp with the keyboard
 //      ./gradlew :examples:tune      watch the sdk's auto-tuner tune a simulated lift, arm or flywheel
 //
@@ -32,7 +32,7 @@ dependencies {
 }
 
 application {
-    mainClass = 'BehaviorBasics'
+    mainClass = 'Examples'
 }
 
 tasks.register('hive', JavaExec) {

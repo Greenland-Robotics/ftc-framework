@@ -18,6 +18,7 @@ import sdk.parts.Lift;
 import sdk.tuning.Tunable;
 import sdk.tuning.TuneReport;
 import subsystem.Subsystem;
+import util.Log;
 import visualizer.Json;
 import visualizer.TreeVisualizer;
 
@@ -47,15 +48,24 @@ public final class TuneDemo {
     private TuneDemo() {}
 
     public static void main(String[] args) throws Exception {
-        new TreeVisualizer(TuneDemo::newRun)
+        TreeVisualizer visualizer = new TreeVisualizer();
+        setUp(visualizer);
+        visualizer.start();
+    }
+
+    /** Puts the tuning demo in the visualizer: the tree, the picture, the drop-down and the values to watch. */
+    public static void setUp(TreeVisualizer visualizer) {
+        Log.setSink(Log.STANDARD_OUT);
+        which = LIFT;
+        visualizer
+                .routine(TuneDemo::newRun)
                 .afterEachTick(TuneDemo::simulate)
                 .scene(TuneDemo::draw)
                 .setting("Mechanism", value -> which = value, LIFT, ARM, FLYWHEEL)
                 .watch("Now → target", () -> String.format(Locale.ROOT, "%.0f → %.0f", tunable.measured(), tunable.setpoint()))
                 .watch("Motor power", () -> String.format(Locale.ROOT, "%.2f", motor.power()))
                 .watch("Gains", () -> tunable.codeLine())
-                .watch("Tuner says", () -> report.lines().isEmpty() ? "" : report.lines().get(report.lines().size() - 1))
-                .start();
+                .watch("Tuner says", () -> report.lines().isEmpty() ? "" : report.lines().get(report.lines().size() - 1));
     }
 
     /** A fresh mechanism with bad gains, and the tree: auto-tune, then test moves. Restart calls this again. */

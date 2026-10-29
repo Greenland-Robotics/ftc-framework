@@ -16,15 +16,15 @@ Code to learn from and copy. **Nothing in this folder is built into the robot ap
 | [`hive/`](general/hive/) | This season's hive game, simulated: drive a robot with the keyboard and watch its TeleOp tree react. The Auto and TeleOp share one tree |
 
 ### Running the behavior tree visualizer
-Pick whichever fits how you work:
+**Every example in one page:** run **Examples** and pick one from the **Example** drop-down at the top of the page (behavior tree basics, the hive game, the tuning demo). Play, Step and Restart work on the one you picked; switching stops it and starts the new one.
 
 | Where | How |
 |-------|-----|
-| VS Code (with or without the dev container) | **Run and Debug** (▷ in the sidebar) → **Behavior tree visualizer**, or **Terminal** → **Run Task…** → **Run behavior tree visualizer** |
-| Android Studio | Choose **Behavior tree visualizer** in the run configuration dropdown next to ▶ and press Run |
+| VS Code (with or without the dev container) | **Run and Debug** (▷ in the sidebar) → **Examples**, or **Terminal** → **Run Task…** → **Run examples** |
+| Android Studio | Choose **Examples** in the run configuration dropdown next to ▶ and press Run |
 | Terminal | `./gradlew :examples:run` |
 
-Then open **http://localhost:8765** (it opens by itself when not in a container). Stop the program to quit.
+Then open **http://localhost:8765** (it opens by itself when not in a container). Stop the program to quit. Each example can also run on its own (**Hive game**, **Tuning demo**, or `./gradlew :examples:hive` / `:examples:tune`).
 
 The page shows every node in the tree and what is happening to it:
 - **Step** calls `runner.tick()` once, so you can follow a single tick through the tree. The nodes ticked in that step glow: that is the path the tick took.
@@ -45,13 +45,16 @@ To just print, without the web page:
 ./gradlew :examples:run --args=--console
 ```
 
-To visualize your own tree, copy `BehaviorBasics.java`, change `routine()`, and point `mainClass` in [`build.gradle`](build.gradle) (and the VS Code launch config) at your class:
+To visualize your own tree, copy `BehaviorBasics.java`, change `routine()` and `setUp`, and add it to the drop-down in [`Examples.java`](general/Examples.java):
 ```java
-public static void main(String[] args) throws Exception {
-    new TreeVisualizer(MyTree::routine)          // Called again on Restart: reset your "robot" in it
-            .watch("arm position", () -> armPosition)
-            .start();
+public static void setUp(TreeVisualizer visualizer) {
+    visualizer
+            .routine(MyTree::routine)                // Called again on Restart: reset your "robot" in it
+            .watch("arm position", () -> armPosition);
 }
+
+// Examples.java
+.example("My tree", MyTree::setUp)
 ```
 It works with custom nodes too: it finds each node's children with reflection. It is only for running on a computer, so it isn't part of the robot app.
 

@@ -54,7 +54,7 @@ The container can't see USB devices, so deploy over Wi-Fi:
 2. It may take a few minutes to sync and build. You are ready when the left-hand panel shows `robot`, `framework`, `pedro`, `FtcRobotController` and `Gradle Scripts`.
 3. Plug in or connect to your Control Hub and press the green **Run** button to deploy.
 
-To see how behavior trees run without a robot, pick the **Behavior tree visualizer** run configuration instead (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)), or **Hive game** to [drive a simulated robot](#try-it-without-a-robot-the-hive-game).
+To see how behavior trees run without a robot, pick the **Examples** run configuration instead (every laptop example in one page, picked from a drop-down) (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)), or **Hive game** to [drive a simulated robot](#try-it-without-a-robot-the-hive-game).
 
 ---
 
@@ -113,8 +113,9 @@ All under **Terminal** → **Run Task…**, in or out of the container:
 | **Build** (`Ctrl/Cmd+Shift+B`) | Compiles the Robot Controller app |
 | **Connect to Control Hub (Wi-Fi)** | Connects `adb` to a Control Hub whose Wi-Fi network you have joined (not needed over USB) |
 | **Deploy to robot** | Installs the app on the connected Control Hub/phone and starts it |
-| **Test framework** | Runs the behavior tree unit tests (no robot needed) |
-| **Run behavior tree visualizer** | Runs the behavior tree example on this computer with a live view at http://localhost:8765 (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)) |
+| **Test framework** | Runs the behavior tree and sdk unit tests (no robot needed) |
+| **Run examples** | Every laptop example (behavior tree basics, hive game, tuning demo) in one page at http://localhost:8765, picked from a drop-down (see [`examples/`](../examples/README.md#running-the-behavior-tree-visualizer)) |
+| **Run tuning demo** | The sdk's auto-tuner on a simulated lift, arm or flywheel (see [Tuning](../sdk/README.md#tuning)) |
 | **Run hive game** | Drive a simulated robot through this season's game with the keyboard at http://localhost:8765 (see [above](#try-it-without-a-robot-the-hive-game)) |
 | **Refresh VS Code classpath** | Updates VS Code's view of the libraries |
 | **Clean** | Deletes build outputs |

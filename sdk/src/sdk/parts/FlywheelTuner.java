@@ -177,6 +177,18 @@ final class FlywheelTuner extends Action {
         wheel.setGains(original[0], original[1], original[2], original[3]);
     }
 
+    /** Where it is, for the behavior tree visualizer and debugging. */
+    @Override
+    public String toString() {
+        if (phase == null) return "Tunes maxRpm, friction and kP by itself";
+        switch (phase) {
+            case LOW_POWER: return "1/2 Measuring the speed at 35% power";
+            case HIGH_POWER: return "1/2 Measuring the speed at 75% power";
+            case DONE: return report.failed() ? "Stopped: " + report.failure() : "Done: " + wheel.codeLine();
+            default: return "2/2 Trying kP " + TuneReport.number(trialKp) + (bestKp >= 0 ? ", best so far " + TuneReport.number(bestKp) : "");
+        }
+    }
+
     private static double average(List<Double> values) {
         if (values.isEmpty()) return 0;
         double sum = 0;

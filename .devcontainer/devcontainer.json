@@ -26,7 +26,7 @@
   // VS Code forwards it, so http://localhost:8765 works in the browser on your computer.
   "forwardPorts": [8765],
   "portsAttributes": {
-    "8765": { "label": "Behavior tree visualizer", "onAutoForward": "openBrowserOnce" }
+    "8765": { "label": "Examples (behavior tree visualizer)", "onAutoForward": "openBrowserOnce" }
   },
 
   // Download dependencies and generate the Java project VS Code loads (gradle/vscode.gradle).

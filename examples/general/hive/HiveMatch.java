@@ -36,7 +36,6 @@ public final class HiveMatch {
     private static final String BLUE_AI = "Blue robot: runs the Auto";
     private static final String BLUE_OFF = "Blue robot: off the field";
 
-    private static TreeVisualizer visualizer;
     private static Driver keyboard;
     private static boolean fullMatch;
     private static boolean blueAi = true;
@@ -49,13 +48,22 @@ public final class HiveMatch {
     private HiveMatch() {}
 
     public static void main(String[] args) throws Exception {
+        TreeVisualizer visualizer = new TreeVisualizer();
+        setUp(visualizer);
+        visualizer.start();
+    }
+
+    /** Puts the hive game in the visualizer: the match, the field drawing, the keys and the drop-downs. */
+    public static void setUp(TreeVisualizer visualizer) {
         // Debug unless -Dlog.level says otherwise, with the match time on each line
         if (System.getProperty("log.level") == null) Log.setLevel(Log.Level.DEBUG);
         Log.setSink((level, tag, message) -> System.out.println(String.format(Locale.ROOT, "%6.2f s %-5s [%s] %s",
                 field == null ? 0 : field.time(), level, tag, message)));
-        visualizer = new TreeVisualizer(HiveMatch::newMatch);
         keyboard = new GamepadDriver(new KeyboardController(visualizer::isHeld));
+        fullMatch = false;
+        blueAi = true;
         visualizer
+                .routine(HiveMatch::newMatch)
                 .afterEachTick(HiveMatch::simulate)
                 .scene(() -> FieldDrawing.draw(field, red == null ? null : red.body))
                 .key("Drive forward / back", "ArrowUp", "ArrowDown")
@@ -74,8 +82,7 @@ public final class HiveMatch {
                 .watch("Blue hive (top : bottom units)", () -> hiveText(field.hive(Alliance.BLUE)))
                 .watch("Score (red : blue)", () -> field.score(Alliance.RED) + " : " + field.score(Alliance.BLUE))
                 .watch("Ball layout seed", () -> field.seed)
-                .watch("Match time", () -> String.format(Locale.ROOT, "%.1f s", field.time()))
-                .start();
+                .watch("Match time", () -> String.format(Locale.ROOT, "%.1f s", field.time()));
     }
 
     /** A new field and robots; Restart (or changing a setting) calls this again. */

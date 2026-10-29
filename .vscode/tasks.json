@@ -46,8 +46,8 @@
       "problemMatcher": []
     },
     {
-      "label": "Run behavior tree visualizer",
-      "detail": "Run examples/general/BehaviorBasics and show its tree live at http://localhost:8765",
+      "label": "Run examples",
+      "detail": "Every laptop example (behavior tree basics, hive game, tuning demo) in one page at http://localhost:8765",
       "type": "shell",
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },
