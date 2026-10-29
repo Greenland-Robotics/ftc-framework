@@ -28,5 +28,5 @@ android {
 apply from: '../build.dependencies.gradle'
 
 dependencies {
-    api project(':framework')
+    api project(':sdk')
 }

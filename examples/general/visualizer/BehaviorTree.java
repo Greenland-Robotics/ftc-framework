@@ -296,7 +296,18 @@ final class BehaviorTree {
         if (n instanceof WaitUntil) return "RUNNING until its check is true";
         if (n instanceof Delay) return "Waits " + read(n, "millis") + " ms (by the clock, not by ticks)";
         if (info.type().equals("Node (lambda)")) return "A node written as a lambda";
-        return settings(n);
+        String own = ownDescription(n);
+        return own != null ? own : settings(n);
+    }
+
+    /** What a node says about itself, if its class has its own toString(). */
+    private static String ownDescription(Node node) {
+        try {
+            if (node.getClass().getMethod("toString").getDeclaringClass() == Object.class) return null;
+            return node.toString();
+        } catch (NoSuchMethodException | RuntimeException e) {
+            return null;
+        }
     }
 
     private static ParallelPolicy policy(Parallel parallel) {
@@ -304,7 +315,10 @@ final class BehaviorTree {
         return policy instanceof ParallelPolicy ? (ParallelPolicy) policy : null;
     }
 
-    /** A custom node's simple settings, like "target = 1.0". Skips the framework's own fields. */
+    /**
+     * A custom node's simple settings, like "target = 1.0". Skips the framework's own fields. A
+     * node with a lot going on can describe itself instead, with its own toString().
+     */
     private static String settings(Node node) {
         StringBuilder text = new StringBuilder();
         for (Field field : fields(node.getClass())) {

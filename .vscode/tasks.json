@@ -3,7 +3,7 @@
   "tasks": [
     {
       "label": "Build",
-      "detail": "Compile the Robot Controller app (robot + framework + pedro + FtcRobotController)",
+      "detail": "Compile the Robot Controller app (robot + framework + sdk + pedro + FtcRobotController)",
       "type": "shell",
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },
@@ -13,11 +13,11 @@
     },
     {
       "label": "Test framework",
-      "detail": "Run the behavior tree unit tests (no robot needed)",
+      "detail": "Run the behavior tree and sdk unit tests (no robot needed)",
       "type": "shell",
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },
-      "args": [":framework:test"],
+      "args": [":framework:test", ":sdk:testDebugUnitTest"],
       "group": "test",
       "problemMatcher": []
     },
@@ -46,8 +46,8 @@
       "problemMatcher": []
     },
     {
-      "label": "Run behavior tree visualizer",
-      "detail": "Run examples/general/BehaviorBasics and show its tree live at http://localhost:8765",
+      "label": "Run examples",
+      "detail": "Every laptop example (behavior tree basics, hive game, tuning demo) in one page at http://localhost:8765",
       "type": "shell",
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },
@@ -61,6 +61,15 @@
       "command": "./gradlew",
       "windows": { "command": ".\\gradlew.bat" },
       "args": [":examples:hive"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run tuning demo",
+      "detail": "Watch the sdk's auto-tuner tune a simulated lift, arm or flywheel at http://localhost:8765",
+      "type": "shell",
+      "command": "./gradlew",
+      "windows": { "command": ".\\gradlew.bat" },
+      "args": [":examples:tune"],
       "problemMatcher": []
     },
     {

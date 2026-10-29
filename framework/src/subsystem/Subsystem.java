@@ -6,6 +6,12 @@ package subsystem;
  * as {@code intake.collect()}.
  */
 public interface Subsystem {
-    /** Called once per loop, before behaviors tick: read sensors, update controllers. */
+    /** Called once per loop after start, before behaviors tick: read sensors, update controllers. */
     default void periodic() {}
+
+    /**
+     * Called once per loop during init, before start. Read sensors (a camera, an encoder) here,
+     * but never move a motor: the robot must stay still until start.
+     */
+    default void initPeriodic() {}
 }

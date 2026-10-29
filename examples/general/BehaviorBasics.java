@@ -6,6 +6,7 @@ import behavior.Action;
 import behavior.Node;
 import behavior.Status;
 import behavior.runtime.BehaviorRunner;
+import util.Log;
 import visualizer.TreeVisualizer;
 
 /**
@@ -17,10 +18,11 @@ import visualizer.TreeVisualizer;
  * On a real robot, AutoBase/TeleOpBase run that loop for you.
  *
  * Run it (see examples/README.md for more ways):
- *     VS Code:         Run and Debug → "Behavior tree visualizer"
- *     Android Studio:  the "Behavior tree visualizer" run configuration
+ *     VS Code:         Run and Debug → "Examples"
+ *     Android Studio:  the "Examples" run configuration
  *     Terminal:        ./gradlew :examples:run
- * then open http://localhost:8765. Pass --console to just print, without the web page.
+ * then open http://localhost:8765 (it's the first one in the Example drop-down). Pass --console
+ * to just print, without the web page.
  */
 public class BehaviorBasics {
     static double armPosition;
@@ -33,12 +35,20 @@ public class BehaviorBasics {
             runInConsole();
             return;
         }
-        new TreeVisualizer(BehaviorBasics::routine)
+        TreeVisualizer visualizer = new TreeVisualizer();
+        setUp(visualizer);
+        visualizer.start();
+    }
+
+    /** Puts this example in the visualizer: its tree, its pretend world and the values to watch. */
+    public static void setUp(TreeVisualizer visualizer) {
+        Log.setSink(Log.STANDARD_OUT);
+        visualizer
+                .routine(BehaviorBasics::routine)
                 .afterEachTick(BehaviorBasics::simulate)
                 .watch("armPosition", () -> armPosition)
                 .watch("grabAttempts", () -> grabAttempts)
-                .watch("batteryOk", () -> batteryOk)
-                .start();
+                .watch("batteryOk", () -> batteryOk);
     }
 
     /** Builds the tree. Restart in the web page calls this again, so it also resets the "robot". */

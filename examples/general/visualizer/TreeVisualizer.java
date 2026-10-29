@@ -47,6 +47,9 @@ import visualizer.WebServer.Response;
  * <p>For a simulated robot it can also draw a {@link #scene scene} (like the field), pass
  * {@link #key keys} held in the page to the program (to drive with the keyboard), and offer
  * {@link #setting settings} that restart the routine.
+ *
+ * <p>One page can hold several programs: give each one to {@link #example} and the page gets an
+ * "Example" drop-down to switch between them (see Examples.java).
  */
 public final class TreeVisualizer implements BehaviorTree.Listener {
     public static final int DEFAULT_PORT = 8765;
@@ -54,7 +57,10 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
     private static final int LOG_LIMIT = 300;
     private static final int NODE_OUTPUT_LIMIT = 3;
 
-    private final Supplier<Node> routine;
+    private static final String EXAMPLE_SETTING = "Example";
+
+    private Supplier<Node> routine;
+    private final Map<String, Consumer<TreeVisualizer>> examples = new LinkedHashMap<>();
     private final Map<String, Supplier<?>> watches = new LinkedHashMap<>();
     private final List<Runnable> afterTicks = new ArrayList<>();
     private final List<KeyHelp> keys = new ArrayList<>();
@@ -134,6 +140,28 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
         this.routine = routine;
     }
 
+    /** A visualizer whose programs are added with {@link #example}. */
+    public TreeVisualizer() {
+        this(null);
+    }
+
+    /** The tree to run. Restart calls {@code routine} again, so it should also reset any state. */
+    public TreeVisualizer routine(Supplier<Node> routine) {
+        this.routine = routine;
+        return this;
+    }
+
+    /**
+     * Adds a program to the page's "Example" drop-down. {@code setUp} sets the visualizer up the
+     * way that program's own main would ({@link #routine}, {@link #watch}, {@link #scene},
+     * {@link #key}, {@link #setting}...); picking it in the page clears the last program's and
+     * calls {@code setUp} again. The first one added starts.
+     */
+    public TreeVisualizer example(String name, Consumer<TreeVisualizer> setUp) {
+        examples.put(name, setUp);
+        return this;
+    }
+
     /** Shows a value (like a motor position) next to the tree, updated live. */
     public TreeVisualizer watch(String name, Supplier<?> value) {
         watches.put(name, value);
@@ -194,6 +222,11 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
         System.setOut(new PrintStream(new CapturedOutput(console), true));
 
         synchronized (lock) {
+            if (!examples.isEmpty()) {
+                String[] names = examples.keySet().toArray(new String[0]);
+                settings.put(EXAMPLE_SETTING, new Setting(names, this::useExample));
+                useExample(names[0]);
+            }
             reset();
         }
 
@@ -253,6 +286,21 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
         }
     }
 
+    /** Clears the current program's setup and sets up {@code name}'s in its place. */
+    private void useExample(String name) {
+        Setting picker = settings.get(EXAMPLE_SETTING);
+        settings.clear();
+        settings.put(EXAMPLE_SETTING, picker);
+        watches.clear();
+        afterTicks.clear();
+        keys.clear();
+        held.clear();
+        scene = null;
+        routine = null;
+        playing = false;
+        examples.get(name).accept(this);
+    }
+
     private void reset() {
         calling.clear();
         log.clear();
@@ -265,6 +313,7 @@ public final class TreeVisualizer implements BehaviorTree.Listener {
         lastAction = "Nothing yet. Each step calls runner.tick() once.";
         tree = null;
         try {
+            if (routine == null) throw new IllegalStateException("no routine: call routine(...) or pass one to the constructor");
             tree = new BehaviorTree(routine.get(), this);
             runner = new BehaviorRunner();
             runner.run(tree.root);

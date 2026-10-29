@@ -11,8 +11,9 @@ import robot.control.TeleOpBase;
 public class BoilerplateTeleOp extends TeleOpBase {
     @Override
     protected void bindControls(Bindings controls) {
-        // controls.onPress(() -> gamepad2.a, robot.intake.collect());
-        // controls.whileHeld(() -> gamepad2.right_bumper, robot.intake.run());
+        // Gamepad 1 (driver) already drives. Bind gamepad 2 (operator) to behaviors:
+        // controls.onPress(operator.a(), robot.intake.collect());
+        // controls.whileHeld(operator.rightBumper(), robot.intake.run());
     }
 
     @Override

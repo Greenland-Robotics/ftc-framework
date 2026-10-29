@@ -19,15 +19,21 @@ import behavior.Status;
 public final class FollowPath extends Action {
     private final Follower follower;
     private final Supplier<PathChain> path;
+    private final double maxPower;
 
     public FollowPath(Follower follower, Supplier<PathChain> path) {
+        this(follower, path, 1);
+    }
+
+    public FollowPath(Follower follower, Supplier<PathChain> path, double maxPower) {
         this.follower = Objects.requireNonNull(follower, "follower");
         this.path = Objects.requireNonNull(path, "path");
+        this.maxPower = maxPower;
     }
 
     @Override
     protected void start() {
-        follower.followPath(path.get());
+        follower.followPath(path.get(), maxPower, true);
     }
 
     @Override

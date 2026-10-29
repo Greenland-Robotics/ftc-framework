@@ -1,0 +1,56 @@
+//
+// build.gradle in sdk
+//
+// Ready-made robot parts (Lift, Arm, Roller, ServoPart, Flywheel), gamepad and drive helpers,
+// the Auto menu, and vision, all under the sdk package.
+//
+// One rule keeps it testable: only sdk.ftc (src/sdk/ftc/) may use the FTC SDK. Everything else
+// is plain Java that talks to the small sdk.hardware interfaces, so it runs in unit tests and in
+// the hive simulator (examples/build.gradle compiles it without sdk/ftc, so a stray FTC import
+// outside sdk.ftc breaks that build straight away).
+//
+//      ./gradlew :sdk:testDebugUnitTest
+//
+apply plugin: 'com.android.library'
+
+android {
+    namespace = 'gcsrobotics.sdk'
+    compileSdk 34
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src']
+        }
+        test {
+            java.srcDirs = ['test']
+        }
+    }
+
+    defaultConfig {
+        minSdkVersion 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+            testLogging {
+                events 'failed'
+                exceptionFormat 'full'
+            }
+        }
+    }
+}
+
+apply from: '../build.dependencies.gradle'
+
+dependencies {
+    api project(':framework')
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

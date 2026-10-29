@@ -1,4 +1,5 @@
-# Runs the framework tests, builds the robot app, and checks that the FTC examples still compile.
+# Runs the framework and sdk tests, builds the robot app and the laptop examples, and checks that
+# the FTC examples and season robots still compile.
 name: CI
 
 on:
@@ -20,8 +21,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Test framework and build robot app
-        run: ./gradlew --console=plain :framework:test :robot:assembleDebug
+      - name: Test framework and sdk, build robot app and laptop examples
+        # :examples:compileJava also checks that the sdk outside sdk/ftc stays plain Java
+        run: ./gradlew --console=plain :framework:test :sdk:testDebugUnitTest :examples:compileJava :robot:assembleDebug
 
       - name: Compile the FTC examples
         # Install the examples into robot/ the way the README describes, then compile
@@ -29,13 +31,26 @@ jobs:
           cp examples/ftc/Intake.java robot/src/robot/subsystems/
           cp examples/ftc/Example*.java examples/ftc/Boilerplate*.java robot/src/robot/opmode/
           sed -i \
-            -e 's|    // public final Intake intake;|    public final robot.subsystems.Intake intake;|' \
-            -e 's|        // intake = register(new Intake(hardwareMap));|        intake = register(new robot.subsystems.Intake(hardwareMap));|' \
+            -e 's|    // public final Roller intake;|    public final robot.subsystems.Intake intake;|' \
+            -e 's|        // intake = register(new Roller(.*|        intake = register(new robot.subsystems.Intake(hardwareMap));|' \
             robot/src/robot/Robot.java
-          grep -q "intake = register" robot/src/robot/Robot.java
+          grep -q "intake = register(new robot.subsystems.Intake" robot/src/robot/Robot.java
           ./gradlew --console=plain :robot:compileDebugJavaWithJavac
+
+      - name: Compile the season examples
+        # Lay each season's robot over robot/src/robot, as its README describes, then compile
+        run: |
+          for season in examples/ftc/seasons/*/; do
+            git checkout -- robot && git clean -fdq robot
+            cp -R "$season". robot/src/robot/
+            echo "== $season"
+            ./gradlew --console=plain -q :robot:compileDebugJavaWithJavac
+          done
+          git checkout -- robot && git clean -fdq robot
 
       - name: Run the general example
         run: |
-          javac -d build/examples $(find framework/src examples/general -name '*.java')
+          # The sdk outside sdk/ftc is plain Java, so it compiles without the FTC SDK
+          javac -d build/examples $(find framework/src examples/general -name '*.java') \
+            $(find sdk/src -name '*.java' -not -path 'sdk/src/sdk/ftc/*')
           java -cp build/examples BehaviorBasics --console

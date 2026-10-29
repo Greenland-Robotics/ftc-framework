@@ -4,8 +4,9 @@
 // Builds and runs the laptop examples in general/ (plain Java, no Android), such as the
 // behavior tree visualizer:
 //
-//      ./gradlew :examples:run       the behavior tree basics
+//      ./gradlew :examples:run       every example in one page: pick one from the drop-down
 //      ./gradlew :examples:hive      play a hive game match: Auto, and TeleOp with the keyboard
+//      ./gradlew :examples:tune      watch the sdk's auto-tuner tune a simulated lift, arm or flywheel
 //
 // The FTC examples in ftc/ are only for copying into robot/, so they are not built.
 //
@@ -18,7 +19,9 @@ java {
 
 sourceSets {
     main {
-        java.srcDirs = ['general']
+        // The sdk's plain-Java parts run in the simulator too; sdk/ftc needs the FTC SDK, so it is left out
+        java.srcDirs = ['general', '../sdk/src']
+        java.exclude 'sdk/ftc/**'
         resources.srcDirs = ['general']
         resources.includes = ['**/*.html']
     }
@@ -29,7 +32,7 @@ dependencies {
 }
 
 application {
-    mainClass = 'BehaviorBasics'
+    mainClass = 'Examples'
 }
 
 tasks.register('hive', JavaExec) {
@@ -37,6 +40,13 @@ tasks.register('hive', JavaExec) {
     description = 'Play a simulated hive game match (Auto, and TeleOp with the keyboard), with the behavior tree shown live.'
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'hive.HiveMatch'
+}
+
+tasks.register('tune', JavaExec) {
+    group = 'application'
+    description = "Watch the sdk's auto-tuner tune a simulated lift, arm or flywheel, with the tree shown live."
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tunedemo.TuneDemo'
 }
 
 tasks.withType(JavaExec).configureEach {
