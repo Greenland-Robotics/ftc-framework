@@ -21,6 +21,15 @@
       "projectName": "${workspaceFolderBasename}",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
+    },
+    {
+      "type": "java",
+      "name": "Tuning demo",
+      "request": "launch",
+      "mainClass": "tunedemo.TuneDemo",
+      "projectName": "${workspaceFolderBasename}",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
     }
   ]
 }

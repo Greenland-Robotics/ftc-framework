@@ -4,14 +4,15 @@ Code to learn from and copy. **Nothing in this folder is built into the robot ap
 
 | Folder | What it is | Needs |
 |--------|------------|-------|
-| [`general/`](general/) | How behavior trees work on their own: composites, decorators, a reactive guard and a custom Action. Runs on any computer | Only the `framework` module |
-| [`ftc/`](ftc/) | A subsystem and OpModes built on `AutoBase`/`TeleOpBase`, Pedro Pathing and robot hardware | The FTC SDK, `pedro` and the `robot` module |
+| [`general/`](general/) | How behavior trees work on their own, and the hive game simulator. Runs on any computer | The `framework` module and the sdk's plain-Java parts |
+| [`ftc/`](ftc/) | OpModes built on `AutoBase`/`TeleOpBase`, a subsystem written from scratch, and [whole robots for past seasons](ftc/seasons/) | The FTC SDK, `sdk`, `pedro` and the `robot` module |
 
 ## general/
 | File | Shows |
 |------|-------|
 | [`BehaviorBasics.java`](general/BehaviorBasics.java) | `sequence`, `parallel`, `selector` with `retry`, a `reactiveSequence` guard halting an arm, `withTimeout`, and a custom `Action`, shown live in the behavior tree visualizer |
 | [`visualizer/`](general/visualizer/) | The behavior tree visualizer: runs a tree on your computer and shows it in a web page |
+| [`tunedemo/`](general/tunedemo/) | The sdk's auto-tuner tuning a simulated lift, arm or flywheel, then test moves with the gains it found, with a live graph. See [Tuning](../sdk/README.md#tuning) |
 | [`hive/`](general/hive/) | This season's hive game, simulated: drive a robot with the keyboard and watch its TeleOp tree react. The Auto and TeleOp share one tree |
 
 ### Running the behavior tree visualizer
@@ -63,6 +64,15 @@ For a simulated robot, the visualizer can also draw a picture next to the tree a
 | `.key("Drive forward", "ArrowUp")` | Passes that key to the program instead of using it as a page shortcut, and lists it under **Controls**. Read it with `isHeld("ArrowUp")` |
 | `.setting("Match", value -> ..., "A", "B")` | A drop-down in the page; changing it calls your code and restarts |
 
+### The tuning demo
+| Where | How |
+|-------|-----|
+| VS Code | **Run and Debug** → **Tuning demo**, or **Run Task…** → **Run tuning demo** |
+| Android Studio | The **Tuning demo** run configuration |
+| Terminal | `./gradlew :examples:tune` |
+
+Open **http://localhost:8765**, pick the mechanism from the drop-down and press **Play**. The tree runs `Auto-tune`, then a few moves with the gains it found; the picture shows the mechanism and a graph of where it is against where it's going. **Robot state** shows the gains as they change, and the console prints the tuner's report. It is the same code the **Tune mechanisms** OpMode runs on the robot; only the motor is a [`SimMotor`](../sdk/src/sdk/hardware/SimMotor.java).
+
 ### The hive game
 [`hive/`](general/hive/) simulates this season's game so you can practice the TeleOp, and watch its behavior tree, without a robot:
 
@@ -96,6 +106,17 @@ Every match (and every **Restart**) scatters the balls differently, mirrored so 
 
 The routines only talk to the subsystems (`Drive`, `Intake`, `Shooter`) and a `Driver`, never to the simulation. To run them on the robot, give them subsystems that own real hardware, with the same methods, and a `Driver` that reads the gamepad.
 
+**Built on the sdk.** The hive robot uses the same [sdk parts](../sdk/README.md) as a real robot, with pretend hardware:
+
+| Hive class | sdk parts inside | The only simulator-specific bit |
+|------------|------------------|---------------------------------|
+| [`Intake`](general/hive/Intake.java) | `Roller` | `Motor motor = power -> body.intakePower = power;` |
+| [`Shooter`](general/hive/Shooter.java) | `Flywheel` + `ServoPart` feeder | a `Motor` that reports the simulated wheel speed, a `Servo` that launches a ball when it swings forward |
+| [`GamepadDriver`](general/hive/GamepadDriver.java) | `Controller` + `DriveControls` (slow mode on Shift) | [`KeyboardController`](general/hive/KeyboardController.java) maps keys to gamepad buttons; on the robot, `sdk.ftc.GamepadController` reads a real gamepad |
+| [`Field`](general/hive/Field.java) | `FieldSymmetry.ROTATE` | mirrors the ball layout and the blue robot's start |
+
+`Intake` and `Shooter` are the "wrap parts in a season subsystem" step of [Adding your own](../sdk/README.md#adding-your-own): the parts do the motors, the class adds the game's words (`collect()` one more ball, `feed()`). The examples build compiles the sdk without `sdk/ftc/`, so this also checks that the parts stay plain Java.
+
 ## ftc/
 Copy these into `robot/src/robot/opmode/` (OpModes) or `robot/src/robot/subsystems/` (subsystems). Their `package` lines already match those folders.
 
@@ -103,8 +124,9 @@ Copy these into `robot/src/robot/opmode/` (OpModes) or `robot/src/robot/subsyste
 |------|------------|
 | [`BoilerplateAuto.java`](ftc/BoilerplateAuto.java) | Empty Auto to start from |
 | [`BoilerplateTeleOp.java`](ftc/BoilerplateTeleOp.java) | Empty TeleOp to start from |
-| [`Intake.java`](ftc/Intake.java) | A complete subsystem: owns a motor and a sensor, offers `collect()`/`eject()`/`run()` and `hasSample()`, with a custom `Action` inside |
+| [`Intake.java`](ftc/Intake.java) | A subsystem written from scratch (no sdk part): owns a motor and a sensor, offers `collect()`/`eject()`/`run()` and `hasSample()`, with a custom `Action` inside. For a real intake, an sdk `Roller` does all this in one line |
 | [`ExampleAuto.java`](ftc/ExampleAuto.java) | Scores, tries to grab another sample, and uses a `selector` to park if that fails |
-| [`ExampleTeleOp.java`](ftc/ExampleTeleOp.java) | A TeleOp with `onPress`, `toggleOnPress` and `whileHeld` bindings |
+| [`ExampleTeleOp.java`](ftc/ExampleTeleOp.java) | A TeleOp with `onPress`, `toggleOnPress` and `whileHeld` bindings on `driver`/`operator`, and a timed park |
+| [`seasons/`](ftc/seasons/) | Whole robots (Robot, season subsystems, TeleOp, Auto) for DECODE, INTO THE DEEP and CENTERSTAGE, built from sdk parts |
 
 `ExampleAuto` and `ExampleTeleOp` use `robot.intake`: copy `Intake.java` into `robot/src/robot/subsystems/` and register it in `Robot.java` (the comments there show how). Rename the hardware names (`"intake"`, `"intakeSensor"`) to match your robot's configuration.

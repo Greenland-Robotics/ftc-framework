@@ -13,13 +13,15 @@ import robot.control.AutoBase;
 public class BoilerplateAuto extends AutoBase {
     @Override
     protected void initialize() {
-        // robot.drive.setStartingPose(new Pose(0, 0, Math.toRadians(0)));
+        // Add your own menu lines: start = menu().choice("Start", Start.values());
     }
 
     @Override
     protected Node routine() {
+        // Runs at start, after the menu: poses are written for blue and flipped for red
+        // robot.drive.setStartingPose(pose(56, 8, 90));
         return sequence(
-                // robot.drive.follow(...), robot.intake.collect(), ...
+                // robot.drive.driveTo(pose(56, 36, 90)), robot.intake.collect(), ...
         );
     }
 

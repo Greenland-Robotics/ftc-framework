@@ -12,6 +12,7 @@ import java.util.Random;
 import java.util.function.Predicate;
 
 import behavior.runtime.Clock;
+import sdk.auto.FieldSymmetry;
 import util.Log;
 
 /**
@@ -24,6 +25,8 @@ import util.Log;
  */
 public final class Field {
     public static final double SIZE = 144;
+    /** The two halves match turned half a circle about the center, like INTO THE DEEP's field. */
+    public static final FieldSymmetry SYMMETRY = FieldSymmetry.ROTATE;
     static final double DT = 0.02;
 
     /** How far each hive is from the side wall. */
@@ -72,7 +75,7 @@ public final class Field {
             if (tooClose) continue;
             boolean softball = placed < SOFTBALLS / 2;
             loose.add(new Ball(softball, x, y));
-            loose.add(new Ball(softball, SIZE - x, SIZE - y));
+            loose.add(new Ball(softball, SYMMETRY.x(x), SYMMETRY.y(y)));
             placed++;
         }
     }

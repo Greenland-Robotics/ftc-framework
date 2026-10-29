@@ -21,7 +21,7 @@
  */
 
 // The team's modules, read from source by VS Code instead of as jars
-def sourceFolders = ['robot/src', 'framework/src', 'framework/test', 'pedro/src', 'examples/general']
+def sourceFolders = ['robot/src', 'framework/src', 'framework/test', 'sdk/src', 'sdk/test', 'pedro/src', 'examples/general']
 
 def root = rootProject.projectDir
 def classpathDir = rootProject.file('.vscode/classpath')
@@ -35,7 +35,7 @@ tasks.register('vscodeClasspath', Sync) {
     from(configurations.debugCompileClasspath.incoming.artifactView {
         // Unpacks AARs and resolves project(':FtcRobotController') to its classes jar
         attributes.attribute(Attribute.of('artifactType', String), 'android-classes-jar')
-        // framework and pedro are already source folders in VS Code, so skip their jars
+        // framework, sdk and pedro are already source folders in VS Code, so skip their jars
         componentFilter { id ->
             !(id instanceof ProjectComponentIdentifier) || id.projectPath == ':FtcRobotController'
         }

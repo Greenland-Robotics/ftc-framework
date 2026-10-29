@@ -9,6 +9,7 @@ All classes are in the `pedro` package, in [`src/pedro/`](src/pedro/).
 | [`Constants.java`](src/pedro/Constants.java) | Motor names/directions, odometry setup and tuned values | **Yes**: first thing to configure for a new robot, then fill in tuned values |
 | [`Drive.java`](src/pedro/Drive.java) | The drivetrain subsystem: follows paths, drives from the gamepad, knows the robot's pose | No |
 | [`FollowPath.java`](src/pedro/FollowPath.java) | The Action behind `drive.follow(...)` and `drive.driveTo(...)` | No |
+| [`Poses.java`](src/pedro/Poses.java) | Flips a pose written for blue to the red side (`AutoBase.pose(...)` uses it) | No |
 | [`Tuning.java`](src/pedro/Tuning.java) | The **Tuning** OpMode (in the Driver Station's "Pedro Pathing" group) | No |
 
 ## Tuning a new robot
@@ -63,8 +64,12 @@ public static int ARM_UP = 1200;
 | Method | Returns | Does |
 |--------|---------|------|
 | `follow(path)` | behavior | Follows a prebuilt `PathChain` (e.g. from your Auto's `Paths` class); succeeds on arrival |
+| `follow(path, maxPower)` | behavior | The same, at no more than `maxPower` |
 | `driveTo(pose)` | behavior | Drives in a straight line to `pose` from **wherever the robot is when it starts** |
-| `drive(forward, strafe, turn)` | | Driver control; ignored while a path is running. `TeleOpBase` calls it for you |
+| `turnTo(degrees)` | behavior | Turns in place to face a heading |
+| `holdPosition()` | behavior | Holds the robot where it is (pushing back if shoved) until halted |
+| `drive(forward, strafe, turn)` / `drive(..., robotCentric)` | | Driver control; ignored while a path is running. `TeleOpBase` calls it for you |
+| `resetHeading()` | | Makes the way the robot faces now heading 0 (field-centric forward) |
 | `pose()` | `Pose` | Where the robot is |
 | `setStartingPose(pose)` | | Tell the localizer where the robot starts (during init) |
 | `pathBuilder()` | `PathBuilder` | Build paths for your `Paths` class |

@@ -134,9 +134,10 @@ Most Actions live inside a [subsystem](#subsystems), which hands them out from m
 A [`Subsystem`](src/subsystem/Subsystem.java) is one mechanism (drivetrain, intake, arm) that **owns its hardware**. Nothing else touches its motors or sensors; instead it offers:
 - **behaviors**: methods returning a `Node`, like `intake.collect()`
 - **checks**: methods returning `boolean`, like `intake.hasSample()`, for conditions
-- **`periodic()`**: called once per loop before behaviors tick; read sensors or run controllers here
+- **`periodic()`**: called once per loop after start, before behaviors tick; read sensors or run controllers here
+- **`initPeriodic()`**: called once per loop during init; read sensors only, since nothing may move before start
 
-Subsystems are created in [`robot/src/robot/Robot.java`](../robot/src/robot/Robot.java). See [`examples/ftc/Intake.java`](../examples/ftc/Intake.java) for a complete one.
+Subsystems are created in [`robot/src/robot/Robot.java`](../robot/src/robot/Robot.java). The [sdk](../sdk/README.md) has ready-made ones for common mechanisms; see [`examples/ftc/Intake.java`](../examples/ftc/Intake.java) for one written from scratch.
 
 Two behaviors that drive the same motor at the same time will fight over it (the last `setPower` wins). Design bindings and trees so that one behavior uses a mechanism at a time.
 

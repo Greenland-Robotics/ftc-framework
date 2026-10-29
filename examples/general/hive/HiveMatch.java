@@ -8,6 +8,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import behavior.Node;
 import behavior.runtime.BehaviorRunner;
+import sdk.auto.FieldSymmetry;
 import util.Log;
 import visualizer.TreeVisualizer;
 
@@ -42,6 +43,7 @@ public final class HiveMatch {
 
     private static Field field;
     private static Robot red;
+    private static Robot blue;
     private static BehaviorRunner blueRunner;
 
     private HiveMatch() {}
@@ -52,7 +54,7 @@ public final class HiveMatch {
         Log.setSink((level, tag, message) -> System.out.println(String.format(Locale.ROOT, "%6.2f s %-5s [%s] %s",
                 field == null ? 0 : field.time(), level, tag, message)));
         visualizer = new TreeVisualizer(HiveMatch::newMatch);
-        keyboard = new KeyboardDriver(visualizer::isHeld);
+        keyboard = new GamepadDriver(new KeyboardController(visualizer::isHeld));
         visualizer
                 .afterEachTick(HiveMatch::simulate)
                 .scene(() -> FieldDrawing.draw(field, red == null ? null : red.body))
@@ -83,9 +85,12 @@ public final class HiveMatch {
         field = new Field(fullMatch, seed);
         Log.info("match", "New match, ball layout seed %d (replay it with -Dhive.seed=%d)", seed, seed);
         red = field.addRobot(Alliance.RED, 16, 20, Math.PI / 2, 1);
+        blue = null;
         blueRunner = null;
         if (blueAi) {
-            Robot blue = field.addRobot(Alliance.BLUE, Field.SIZE - 16, Field.SIZE - 20, -Math.PI / 2, 0.6);
+            // Blue starts where red does, turned half a circle about the center (the sdk's field symmetry)
+            FieldSymmetry turned = Field.SYMMETRY;
+            blue = field.addRobot(Alliance.BLUE, turned.x(16), turned.y(20), turned.heading(Math.PI / 2), 0.6);
             blueRunner = new BehaviorRunner();
             blueRunner.run(race(
                     HiveRoutines.autonomous(blue, field),
@@ -99,9 +104,14 @@ public final class HiveMatch {
         return hive.weight[Hive.TOP] + " : " + hive.weight[Hive.BOTTOM] + ", " + state;
     }
 
-    /** After each tick of your tree: the opponent's tree ticks, then the world moves one loop. */
+    /**
+     * After each tick of your tree: the opponent's tree ticks, the world moves one loop, then
+     * both robots' parts read and control (robot.periodic()) ready for the next tick.
+     */
     static void simulate() {
         if (blueRunner != null) blueRunner.tick();
         field.step();
+        red.periodic();
+        if (blue != null) blue.periodic();
     }
 }

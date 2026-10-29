@@ -15,7 +15,14 @@ public final class Robot {
         this.body = body;
         this.alliance = body.alliance;
         this.drive = new Drive(body, router);
-        this.intake = new Intake(body);
+        this.intake = new Intake(body, clock);
         this.shooter = new Shooter(body, clock);
+    }
+
+    /** Every loop before the tree ticks, like robot.periodic() on the robot: the parts read and control. */
+    public void periodic() {
+        drive.periodic();
+        intake.periodic();
+        shooter.periodic();
     }
 }

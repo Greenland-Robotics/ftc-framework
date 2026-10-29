@@ -1,8 +1,9 @@
 package hive;
 
 /**
- * What the driver is asking for. In the simulator the keyboard answers; on the robot a gamepad
- * will (e.g. {@code forward()} is {@code -gamepad1.left_stick_y}), and the TeleOp tree stays the same.
+ * What the driver is asking for. {@link GamepadDriver} answers from an sdk gamepad: in the
+ * simulator that is the keyboard ({@link KeyboardController}), on the robot a real gamepad
+ * ({@code sdk.ftc.GamepadController}), and the TeleOp tree stays the same.
  */
 public interface Driver {
     /** -1..1, positive drives forward. */

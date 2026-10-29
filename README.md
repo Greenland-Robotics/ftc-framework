@@ -1,6 +1,6 @@
 # Greenland Robotics FTC Framework
 
-A template for FIRST Tech Challenge robots. Build Autos and TeleOps as **behavior trees**: small building blocks ("drive this path", "collect a sample", "try this, otherwise that") combined into routines, instead of long `while` loops. Each mechanism is a **subsystem** that owns its hardware. [Pedro Pathing](https://pedropathing.com) handles driving and path following.
+A template for FIRST Tech Challenge robots. Build Autos and TeleOps as **behavior trees**: small building blocks ("drive this path", "collect a sample", "try this, otherwise that") combined into routines, instead of long `while` loops. Each mechanism is a **subsystem** that owns its hardware, and the **sdk** has ready-made ones for what most games need (lifts, arms, intakes, claws, flywheels, an Auto menu, a camera). [Pedro Pathing](https://pedropathing.com) handles driving and path following.
 
 Works with **Android Studio** and **VS Code**, including a dev container that needs no Java or Android SDK on your computer: just run `./open-workspace`.
 
@@ -9,6 +9,7 @@ Works with **Android Studio** and **VS Code**, including a dev container that ne
 ```
 ftc-framework/
 ├── robot/               ← YOUR ROBOT CODE: subsystems, OpModes
+├── sdk/                 ← Ready-made parts (Lift, Arm, Roller, ServoPart, Flywheel), gamepads, Auto menu, vision
 ├── framework/           ← The behavior tree framework (sequence, selector, Action, ...)
 ├── pedro/               ← Pedro Pathing: drivetrain config, tuning OpModes, the Drive subsystem
 ├── examples/            ← Examples to learn from and copy into robot/
@@ -23,6 +24,7 @@ ftc-framework/
 | Folder | What it is | How often you edit it |
 |--------|------------|-----------------------|
 | [`robot/`](robot/README.md) | The app installed on the robot: `Robot.java`, your subsystems and OpModes | All the time |
+| [`sdk/`](sdk/README.md) | Ready-made robot parts with guardrails, gamepad and drive helpers, the Auto menu and alliance poses, vision. Plain Java except `sdk.ftc`, unit-tested | Rarely: [add your own](sdk/README.md#adding-your-own) in `robot/` first |
 | [`pedro/`](pedro/README.md) | `Constants.java` (motor names, odometry, tuned values), the **Tuning** OpMode, the `Drive` subsystem | When setting up or tuning a robot |
 | [`framework/`](framework/README.md) | The behavior tree building blocks and `Subsystem`. Plain Java, no Android, unit-tested | Only to add new kinds of nodes |
 | [`examples/`](examples/README.md) | A behavior tree demo you can run on a laptop (with a live web view of the tree), and FTC examples (subsystem, Auto, TeleOp) and boilerplates | Never: copy from it |
@@ -38,7 +40,10 @@ Each folder's README explains what's inside and documents its classes.
 |--------------|-------|
 | Set up my computer and deploy to the robot | [`docs/setup.md`](docs/setup.md) |
 | Write an Auto or TeleOp | Copy a boilerplate from [`examples/ftc/`](examples/ftc/) into [`robot/src/robot/opmode/`](robot/src/robot/opmode/) |
-| Add a mechanism (motors, servos, sensors) | A subsystem in [`robot/src/robot/subsystems/`](robot/src/robot/subsystems/), registered in [`Robot.java`](robot/src/robot/Robot.java) |
+| Add a mechanism (motors, servos, sensors) | An [sdk part](sdk/README.md#parts) (`Lift`, `Arm`, `Roller`, `ServoPart`, `Flywheel`) registered in [`Robot.java`](robot/src/robot/Robot.java), or your own subsystem in [`robot/src/robot/subsystems/`](robot/src/robot/subsystems/) |
+| Tune a lift, arm or flywheel | The **Tune mechanisms** OpMode: [Tuning](sdk/README.md#tuning). No robot? `./gradlew :examples:tune` |
+| Build something the sdk doesn't have | [Adding your own](sdk/README.md#adding-your-own): wrap parts, write it raw, then promote it |
+| See a whole robot for a past game | [`examples/ftc/seasons/`](examples/ftc/seasons/) |
 | Write a custom behavior (e.g. raise the arm) | An `Action` inside your subsystem. See [`framework/README.md`](framework/README.md#writing-your-own-action) |
 | Set drive motor names or odometry | [`Constants.java`](pedro/src/pedro/Constants.java) |
 | Tune Pedro Pathing | [`pedro/README.md`](pedro/README.md#tuning-a-new-robot) |
@@ -50,7 +55,7 @@ Each folder's README explains what's inside and documents its classes.
 ## Quick start
 1. Click **Use this template** on GitHub to create your team's repository and clone it. On a Mac, run `./open-workspace` to get a ready-to-go VS Code; otherwise follow [`docs/setup.md`](docs/setup.md).
 2. Set your drive motor names and odometry in [`Constants.java`](pedro/src/pedro/Constants.java), deploy, and run the **Tuning** OpMode.
-3. Add a subsystem for each mechanism and register it in [`Robot.java`](robot/src/robot/Robot.java). [`examples/ftc/Intake.java`](examples/ftc/Intake.java) shows how.
+3. Add each mechanism to [`Robot.java`](robot/src/robot/Robot.java): usually one line with an [sdk part](sdk/README.md#parts), e.g. `lift = register(new Lift(hw.motor("lift")).limits(0, 3000));`.
 4. Copy `BoilerplateAuto.java` / `BoilerplateTeleOp.java` from [`examples/ftc/`](examples/ftc/) into `robot/src/robot/opmode/` and build your behavior trees. See the [robot guide](robot/README.md).
 
 **No robot yet?** Right after cloning, run the hive game simulator: play a match of this season's game (watch the Auto, then drive the TeleOp with the keyboard) and watch the behavior tree react live. In a terminal, run `./gradlew :examples:hive` and open http://localhost:8765, or see [how to run it from VS Code or Android Studio](docs/setup.md#try-it-without-a-robot-the-hive-game).
@@ -58,17 +63,18 @@ Each folder's README explains what's inside and documents its classes.
 ## How the modules fit together
 
 ```
-robot ──► pedro ──► framework
-  │                    ▲
-  └────────────────────┘
+robot ──► pedro ──► sdk ──► framework
+  │                  ▲
+  └──────────────────┘
   └──► FtcRobotController (FTC SDK)
 ```
 
-`framework` knows nothing about the robot; `pedro` adds the `Drive` subsystem on top of it; `robot` builds the robot from subsystems and is what gets installed on it.
+`framework` knows nothing about the robot; `sdk` builds ready-made parts on it; `pedro` adds the `Drive` subsystem; `robot` builds the robot from subsystems and is what gets installed on it.
 
 | Module | Java package | Example import |
 |--------|--------------|----------------|
 | `framework` | `behavior`, `behavior.*`, `subsystem`, `util` | `import static behavior.Behaviors.*;` `import static util.MathUtil.*;` `import util.Log;` |
+| `sdk` | `sdk.parts`, `sdk.teleop`, `sdk.auto`, `sdk.vision`, `sdk.hardware`, `sdk.ftc` | `import sdk.parts.Lift;` `import sdk.ftc.Hardware;` |
 | `pedro` | `pedro` | `import pedro.Drive;` |
 | `robot` | `robot`, `robot.control`, `robot.opmode`, `robot.subsystems` | `import robot.control.AutoBase;` |
 
