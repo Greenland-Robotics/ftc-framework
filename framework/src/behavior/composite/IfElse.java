@@ -15,7 +15,12 @@ public final class IfElse implements Node {
     private final Node then;
     private final Node otherwise;
     private Node chosen;
-
+    /**
+     * The IfElse Node runs one Node if condition is met, otherwise it runs the other Node.
+     * @param condition Condition (boolean). Simplest boolean can be: () -> false
+     * @param then Node to run when Condition is true
+     * @param otherwise Node to run when Condition is false
+     */
     public IfElse(BooleanSupplier condition, Node then, Node otherwise) {
         this.condition = Objects.requireNonNull(condition, "condition");
         this.then = Objects.requireNonNull(then, "then");
