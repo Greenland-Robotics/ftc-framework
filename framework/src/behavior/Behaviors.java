@@ -2,9 +2,11 @@ package behavior;
 
 import java.util.function.BooleanSupplier;
 
+import behavior.composite.Deadline;
 import behavior.composite.IfElse;
 import behavior.composite.Parallel;
 import behavior.composite.ParallelPolicy;
+import behavior.composite.RaceParallelGroup;
 import behavior.composite.ReactiveSelector;
 import behavior.composite.ReactiveSequence;
 import behavior.composite.Selector;
@@ -59,9 +61,12 @@ public final class Behaviors {
 
     /** All at once; the first to succeed wins and the others are halted. */
     public static Node race(Node... children) {
-        return new Parallel(ParallelPolicy.ANY_SUCCEEDS, children);
+        return new RaceParallelGroup(children);
     }
-
+    /** Races One and then all others run in parallel */
+    public static Node deadline(Node deadline, Node... children){
+        return new Deadline(deadline,children);
+    }
     /** Picks a branch once, when it starts. See {@link IfElse}. */
     public static Node ifElse(BooleanSupplier condition, Node then, Node otherwise) {
         return new IfElse(condition, then, otherwise);
